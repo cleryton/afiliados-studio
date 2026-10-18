@@ -1,0 +1,206 @@
+import copy
+import io
+import json
+from datetime import timedelta
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch,MagicMock
+from urllib.error import HTTPError
+from urllib.parse import parse_qs,urlparse
+import app
+import autopilot
+import catalog
+import content_engine
+import core
+import youtube_client as yt
+
+
+class DeliveryTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.override=patch.object(core,'DATA',Path(self.temp.name));self.override.start()
+        core.init();autopilot.init();catalog.init();yt.init()
+        content_engine.configure({'mode':'rules','format':'landscape'})
+        self.item={'id':'sku-1','name':'Organizador de mesa','description':'Possui três divisórias. Material em madeira. Medidas: 20 x 15 cm.',
+                   'affiliate_url':'https://example.com/oferta?afiliado=meu-id','kind':'physical','category':'Casa'}
+
+    def tearDown(self):
+        self.override.stop();self.temp.cleanup()
+        with yt._lock:yt._pending.clear()
+
+    def ready(self):
+        catalog.ingest([self.item],True)
+        autopilot.configure({'enabled':True,'hours':[18]})
+        jid=autopilot.cycle()
+        with core.db() as c:
+            c.execute("UPDATE jobs SET status='ready' WHERE id=?",(jid,))
+            product=dict(c.execute('SELECT * FROM products').fetchone())
+        directory=core.DATA/'media'/jid;directory.mkdir();(directory/'video.mp4').write_bytes(b'video-test-fixture')
+        yt.put({'channel_id':'UC-test','channel_name':'Canal de teste','enabled':True})
+        return core.get_job(jid),product
+
+    def remote(self,jid,stage='processing',video_id='abc12345678'):
+        with core.db() as c:c.execute('INSERT INTO youtube_jobs(job_id,stage,video_id,updated_at) VALUES (?,?,?,?)',(jid,stage,video_id,core.stamp()))
+
+    def video(self,paid=True,privacy='private'):
+        return {'id':'abc12345678','snippet':{'channelId':'UC-test','publishedAt':core.stamp()},'status':{'uploadStatus':'processed','privacyStatus':privacy},
+                'paidProductPlacementDetails':{'hasPaidProductPlacement':paid},'statistics':{'viewCount':'42'}}
+
+    def row(self,jid):
+        with core.db() as c:return dict(c.execute('SELECT * FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone())
+
+    def test_catalog_is_atomic_and_preserves_tracking_link(self):
+        catalog.ingest([self.item],True)
+        invalid=copy.deepcopy(self.item);invalid['id']='bad';invalid['affiliate_url']='http://127.0.0.1/private'
+        with self.assertRaises(ValueError):catalog.ingest([self.item,invalid],True)
+        with core.db() as c:
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM products').fetchone()[0],1)
+            self.assertEqual(c.execute('SELECT url FROM products').fetchone()[0],self.item['affiliate_url'])
+            self.assertEqual(c.execute('SELECT active FROM auto_products').fetchone()[0],1)
+
+    def test_removed_products_and_stale_catalog_not_selected(self):
+        catalog.ingest([self.item],True)
+        with core.db() as c:pid=c.execute('SELECT id FROM products').fetchone()[0]
+        catalog.ingest([],True)
+        self.assertFalse(catalog.eligible(pid))
+        catalog.ingest([self.item],True)
+        with core.db() as c:c.execute('UPDATE catalog_items SET last_seen=?',((core.now()-timedelta(days=2)).isoformat(),))
+        self.assertFalse(catalog.eligible(pid))
+        self.assertEqual(autopilot.candidates(autopilot.settings(),core.now()),[])
+
+    def test_catalog_requires_authorization_and_real_links(self):
+        with self.assertRaises(ValueError):catalog.ingest([self.item])
+        with self.assertRaises(ValueError):catalog.configure({'enabled':True,'url':'https://example.com/catalog','authorized':False})
+        self.assertFalse(app.readiness()['ready'])
+
+    def test_credentials_encrypted_and_missing_channel_clear(self):
+        document={'installed':{'client_id':'test.apps.googleusercontent.com','client_secret':'secret-fixture'}}
+        yt.credentials(document)
+        self.assertNotIn(b'secret-fixture',yt.secret_path('client').read_bytes())
+        self.assertNotIn('secret-fixture',json.dumps(yt.state()))
+        self.assertEqual(yt.read_secret('client')['client_secret'],'secret-fixture')
+        with self.assertRaises(ValueError):yt.credentials({'web':{}})
+
+    def test_oauth_has_pkce_and_rejects_wrong_or_replayed_state(self):
+        yt.credentials({'installed':{'client_id':'test.apps.googleusercontent.com','client_secret':'fixture'}})
+        query=parse_qs(urlparse(yt.begin(8765)).query)
+        self.assertEqual(query['code_challenge_method'],['S256'])
+        self.assertEqual(query['redirect_uri'],['http://127.0.0.1:8765/oauth/youtube/callback'])
+        with self.assertRaises(ValueError):yt.complete('wrong','code')
+        with patch.object(yt,'token_request',return_value={'access_token':'fixture','refresh_token':'refresh'}),patch.object(yt,'api',return_value={'items':[]}):
+            with self.assertRaisesRegex(ValueError,'Crie um canal'):yt.complete(query['state'][0],'code')
+        self.assertFalse(yt.secret_path('tokens').exists())
+        with self.assertRaises(ValueError):yt.complete(query['state'][0],'code')
+
+    def test_description_keeps_link_and_native_disclosure(self):
+        job,product=self.ready();job['caption']='á'*10000
+        metadata=yt.metadata(job,product)
+        self.assertIn(product['url'],metadata['snippet']['description'])
+        self.assertLessEqual(len(metadata['snippet']['description'].encode()),4900)
+        self.assertTrue(metadata['paidProductPlacementDetails']['hasPaidProductPlacement'])
+        self.assertEqual(metadata['status']['privacyStatus'],'private')
+
+    def test_session_url_is_fixed_google_upload_endpoint(self):
+        self.assertTrue(yt.session_valid('https://www.googleapis.com/upload/youtube/v3/videos?upload_id=fixture'))
+        for url in ['http://www.googleapis.com/upload/youtube/v3/videos','https://www.googleapis.com.evil.com/upload/youtube/v3/videos','https://www.googleapis.com:999/upload/youtube/v3/videos','https://x@www.googleapis.com/upload/youtube/v3/videos','https://www.googleapis.com/other']:
+            self.assertFalse(yt.session_valid(url))
+
+    def test_uncertain_initialization_is_never_retried_blindly(self):
+        job,product=self.ready()
+        with patch.object(yt,'initialize_upload',side_effect=OSError('connection lost')) as upload:
+            yt.process(job,product);yt.process(job,product)
+            self.assertEqual(upload.call_count,1)
+        self.assertEqual(self.row(job['id'])['stage'],'uncertain')
+
+    def test_upload_id_persisted_before_polling_processing(self):
+        job,product=self.ready()
+        with patch.object(yt,'initialize_upload'),patch.object(yt,'transfer',return_value={'id':'abc12345678'}) as transfer:
+            yt.process(job,product)
+        self.assertEqual(transfer.call_count,1)
+        self.assertEqual(self.row(job['id'])['stage'],'processing')
+        with patch.object(yt,'api',return_value={'items':[self.video()]}),patch.object(yt,'transfer') as second:
+            yt.process(job,product)
+        second.assert_not_called()
+        self.assertEqual(self.row(job['id'])['stage'],'scheduled')
+
+    def test_disclosure_confirmed_before_scheduling(self):
+        job,product=self.ready();self.remote(job['id'])
+        with patch.object(yt,'api',side_effect=[{'items':[self.video(paid=False)]},{}]) as api:
+            yt.process(job,product)
+        self.assertIn('part=paidProductPlacementDetails',api.call_args.args[0])
+        self.assertEqual(self.row(job['id'])['stage'],'processing')
+        yt.update_job(job['id'],next_check=None)
+        with patch.object(yt,'api',side_effect=[{'items':[self.video()]},{}]) as api:
+            yt.process(job,product)
+        target=api.call_args.args[1]['status']
+        self.assertEqual(target['privacyStatus'],'private');self.assertIn('publishAt',target)
+        self.assertEqual(core.get_job(job['id'])['status'],'ready')
+
+    def test_publication_requires_public_confirmation(self):
+        job,product=self.ready();self.remote(job['id'],'scheduled')
+        with patch.object(yt,'api',return_value={'items':[self.video(privacy='private')]}):yt.process(job,product)
+        self.assertEqual(core.get_job(job['id'])['status'],'ready')
+        with patch.object(yt,'api',return_value={'items':[self.video(privacy='public')]}):yt.process(job,product)
+        result=core.get_job(job['id']);self.assertEqual(result['status'],'published');self.assertEqual(result['views'],42)
+        self.assertTrue(result['tiktok_url'].startswith('https://www.youtube.com/'))
+
+    def test_lost_schedule_response_reconciles_public_without_rescheduling(self):
+        job,product=self.ready();self.remote(job['id'],'processing')
+        with patch.object(yt,'api',return_value={'items':[self.video(privacy='public')]}) as api:yt.process(job,product)
+        self.assertEqual(api.call_count,1)
+        self.assertEqual(core.get_job(job['id'])['status'],'published')
+
+    def test_revoked_catalog_unschedules_existing_private_video(self):
+        job,product=self.ready();self.remote(job['id'],'scheduled');catalog.ingest([],True)
+        with patch.object(yt,'api',return_value={}) as api:yt.process(job,product)
+        self.assertEqual(api.call_args.args[1]['status']['privacyStatus'],'private')
+        self.assertNotIn('publishAt',api.call_args.args[1]['status'])
+        self.assertEqual(self.row(job['id'])['stage'],'held')
+
+    def test_resume_probes_then_sends_only_missing_bytes(self):
+        job,product=self.ready();file=core.DATA/'media'/job['id']/'video.mp4'
+        yt.save_secret('session-'+job['id'],{'url':'https://www.googleapis.com/upload/youtube/v3/videos?upload_id=fixture'})
+        response=MagicMock();response.__enter__.return_value.read.return_value=b'{"id":"abc12345678"}'
+        calls=[]
+        def send(request,**kwargs):
+            calls.append(request)
+            if len(calls)==1:raise HTTPError(request.full_url,308,'resume',{'Range':'bytes=0-4'},None)
+            self.assertEqual(request.data.read(),file.read_bytes()[5:])
+            return response
+        opener=MagicMock();opener.open.side_effect=send
+        with patch.object(yt,'build_opener',return_value=opener),patch.object(yt,'access_token',return_value='fixture'):
+            self.assertEqual(yt.transfer(job['id'],file)['id'],'abc12345678')
+        self.assertEqual(calls[0].get_header('Content-range'),f'bytes */{file.stat().st_size}')
+        self.assertTrue(calls[1].get_header('Content-range').startswith('bytes 5-'))
+
+    def test_reconcile_rejects_another_channel(self):
+        job,product=self.ready();self.remote(job['id'],'uncertain','')
+        video=self.video();video['snippet']['channelId']='another-channel'
+        with patch.object(yt,'api',return_value={'items':[video]}):
+            with self.assertRaises(ValueError):yt.reconcile(job['id'],'abc12345678')
+        self.assertEqual(self.row(job['id'])['stage'],'uncertain')
+
+    def test_pausing_product_holds_pending_upload(self):
+        job,product=self.ready()
+        autopilot.approve_product(product['id'],{'active':False,'approved':True})
+        with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+        upload.assert_not_called()
+        self.assertEqual(self.row(job['id'])['stage'],'held_local')
+
+    def test_changed_catalog_regenerates_before_first_upload(self):
+        job,product=self.ready()
+        product['description']='Quatro divisórias. Estrutura em madeira. Medidas de 25 por 15 centímetros.'
+        with core.db() as c:c.execute('UPDATE products SET description=? WHERE id=?',(product['description'],product['id']))
+        with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+        upload.assert_not_called()
+        self.assertEqual(core.get_job(job['id'])['status'],'queued')
+        self.assertIn('Quatro divisórias',core.get_job(job['id'])['scenes'])
+
+    def test_edit_is_locked_after_external_upload(self):
+        job,product=self.ready();self.remote(job['id'],'scheduled')
+        payload={'scenes':json.loads(job['scenes']),'caption':job['caption'],'due_at':job['due_at'],'rights':True,'action':'render'}
+        with self.assertRaisesRegex(ValueError,'YouTube'):core.edit_job(job['id'],payload)
+
+
+if __name__=='__main__':unittest.main()

@@ -1,0 +1,38 @@
+name: Problema encontrado pelo tester
+description: Informe uma falha sem compartilhar credenciais ou dados pessoais.
+title: "[Tester] "
+body:
+  - type: markdown
+    attributes:
+      value: "Não anexe senhas, OAuth, links pessoais, bancos ou pastas de dados. Use o diagnóstico seguro em Manual no painel."
+  - type: input
+    id: version
+    attributes:
+      label: Versão e modo
+      placeholder: "0.3.0-tester · modo tester"
+    validations:
+      required: true
+  - type: input
+    id: scenario
+    attributes:
+      label: Item do manual e data/hora de Brasília
+      placeholder: "T04 · 18/10/2026 14:00"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado observado
+      description: "Se anexar diagnóstico ou imagem, revise antes para remover dados pessoais."
+    validations:
+      required: true
