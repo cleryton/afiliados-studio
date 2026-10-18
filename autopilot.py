@@ -134,7 +134,9 @@ def candidates(config,current):
         jobs=[dict(r) for r in c.execute('SELECT jobs.*,auto_jobs.variant FROM jobs LEFT JOIN auto_jobs ON job_id=jobs.id')]
     eligible=[]
     for p in products:
-        import catalog
+        import catalog,campaigns
+        campaign=campaigns.for_product(p['id'])
+        if campaign and not campaign['active']:continue
         if not catalog.eligible(p['id']):continue
         history=[j for j in jobs if j['product_id']==p['id']]
         if any(j['status']!='published' for j in history):
@@ -200,11 +202,16 @@ def delivery_cycle(media_url):
     with core.db() as c:
         rows=c.execute("SELECT jobs.* FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status='ready' AND delivery='local' LIMIT 1").fetchall()
     for job in rows:
+        import quality
+        if not quality.inspect(job['id'],verify_media=True)['allowed']:continue
         # Build media access before claiming the external send. Failure here is safe to retry.
         url=media_url(job['id'])
         with core.db() as c:
             if not c.execute("UPDATE auto_jobs SET delivery='sending' WHERE job_id=? AND delivery='local'",(job['id'],)).rowcount:
                 continue
+        if not quality.inspect(job['id'])['allowed']:
+            with core.db() as c:c.execute("UPDATE auto_jobs SET delivery='local' WHERE job_id=? AND delivery='sending'",(job['id'],))
+            continue
         try:
             post=buffer_client.create_draft(config['channel_id'],job['caption'],url,bool(job['voice']))
         except Exception as exc:

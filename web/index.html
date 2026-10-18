@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#142725"><title>Afiliados Studio · Seu conteúdo, em movimento</title>
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/automation.css"><script src="/app.js" defer></script><script src="/automation.js" defer></script><script src="/setup.js" defer></script>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/automation.css"><link rel="stylesheet" href="/professional.css"><script src="/professional.js" defer></script><script src="/app.js" defer></script><script src="/automation.js" defer></script><script src="/setup.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Pular para o conteúdo</a>
@@ -14,7 +14,9 @@
       <a href="#start" data-nav="start"><span aria-hidden="true">↗</span>Começar e acompanhar</a>
       <a href="#overview" data-nav="overview"><span aria-hidden="true">◫</span>Visão geral</a>
       <a href="#products" data-nav="products"><span aria-hidden="true">▱</span>Produtos<span id="product-count" class="nav-count">0</span></a>
+      <a href="#campaigns" data-nav="campaigns"><span aria-hidden="true">▤</span>Campanhas</a>
       <a href="#studio" data-nav="studio"><span aria-hidden="true">▷</span>Estúdio de vídeos</a>
+      <a href="#review" data-nav="review"><span aria-hidden="true">✓</span>Fila de revisão</a>
       <a href="#automation" data-nav="automation"><span aria-hidden="true">⟳</span>Modo automático</a>
       <a href="#calendar" data-nav="calendar"><span aria-hidden="true">▦</span>Calendário</a>
       <a href="#results" data-nav="results"><span aria-hidden="true">↗</span>Resultados</a>
@@ -42,6 +44,7 @@
     </form>
   </dialog>
   <dialog id="job-dialog" class="wide-dialog" aria-labelledby="job-dialog-title"><div id="job-content"></div></dialog>
+  <dialog id="campaign-dialog" aria-labelledby="campaign-title"><div id="campaign-content"></div></dialog>
   <dialog id="results-dialog" aria-labelledby="results-dialog-title"><form id="results-form"><div class="dialog-head"><div><p class="eyebrow">DADOS INFORMADOS POR VOCÊ</p><h2 id="results-dialog-title">Registrar publicação</h2></div><button type="button" class="icon-button" data-close aria-label="Fechar">×</button></div><p class="inline-note">Registre os resultados confirmados da publicação. Cliques e comissões devem vir da sua plataforma de afiliados.</p><label>Link do vídeo no YouTube ou TikTok<input name="tiktok_url" type="url" placeholder="https://www.youtube.com/watch?v=…" required></label><label>Quando foi publicado? (Brasília)<input name="published_at" type="datetime-local" required></label><div class="form-grid"><label>Visualizações<input name="views" type="number" min="0" step="1" value="0" required></label><label>Cliques atribuídos<input name="clicks" type="number" min="0" step="1" value="0" required></label></div><label>Comissões confirmadas, após estornos (R$)<input name="revenue" type="number" min="0" step="0.01" value="0" required></label><p id="results-error" class="form-error" role="alert"></p><div class="dialog-foot"><button type="submit" class="button primary">Salvar resultados</button></div></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
   <dialog id="expense-dialog" aria-labelledby="expense-title"><form id="expense-form"><div class="dialog-head"><h2 id="expense-title">Registrar custo</h2><button class="icon-button" type="button" data-close aria-label="Fechar">×</button></div><label>Descrição<input name="description" maxlength="120" placeholder="Ex.: energia, materiais, serviços…" required></label><label>Valor (R$)<input name="amount" type="number" min="0.01" step="0.01" required></label><p class="field-help">Inclua todos os custos da operação para avaliar o resultado.</p><p id="expense-error" class="form-error" role="alert"></p><div class="dialog-foot"><button class="button primary" type="submit">Salvar custo</button></div></form></dialog>

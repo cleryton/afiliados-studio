@@ -1,5 +1,7 @@
 # Contrato de interface
 
+Evolução 0.4: painel editorial com campanhas e fila de revisão. A ação principal da fila é resolver pendências ou aprovar um vídeo pronto; a direção editorial concentra público, estilo, encerramento, pausa e revisão opcional por vídeo. Contadores resumem estados reais, sem nota de qualidade ou ganhos estimados. A prévia acompanha verificações e uma ação de recuperação. A navegação móvel deve permitir rolar horizontalmente os destinos adicionais sem aumentar a largura da página. Confirmar filtro vazio, MP4 antigo sem verificação, erro de validação, aprovação pendente, aprovação concluída e edição que invalida aprovação nos viewports 1440x900 e 390x844. Mudanças locais preservam os limites reais de TikTok e do modo tester.
+
 Superfície: ferramenta local em português para um afiliado cadastrar um produto, revisar um roteiro, gerar MP4 e registrar resultados reais. A primeira tela é **Começar e acompanhar**, com três etapas: autorizar produtos, conectar canal e iniciar. O destino principal é YouTube; a sequência é catálogo autorizado → roteiro → vídeo → envio privado → publicidade confirmada → agendamento → publicação pública confirmada → resultados registrados.
 
 Direção: painel operacional sóbrio, navegação verde escuro, superfícies claras e destaque verde suave. Referência local: o trabalho começa com um link e acompanha estados de produção; por isso, a primeira tela mostra os requisitos reais de ativação e os estados de publicação. O detalhe visual é uma pequena composição de celular sem imagem de produto inventada.

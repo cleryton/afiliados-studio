@@ -1,6 +1,6 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.3.0-tester · atualizado em 18/10/2026.
+Versão 0.4.0-beta · atualizado em 18/10/2026.
 
 Este roteiro permite testar instalação, roteiro, vídeo, narração, legendas e recuperação de falhas. O primeiro teste não exige conta de afiliado, Google, Buffer nem assinatura de IA.
 
@@ -132,3 +132,23 @@ A validação de envio real deve ser combinada com o responsável pelo teste. El
 Ao ativar a operação normal, vídeos podem ser publicados publicamente no YouTube. Pausar a operação interrompe novas ações locais, mas não remove agendamentos que já estejam no YouTube. Confira a agenda no YouTube Studio.
 
 A integração de postagem foi testada com respostas simuladas; o primeiro upload em uma conta real ainda precisa de validação. O TikTok continua como rascunho na integração atual. Cliques e comissões são informados pelo usuário, e nenhuma receita é garantida.
+
+## 10. Testar campanhas e revisão (0.4)
+
+1. Crie a demonstração local e aguarde o MP4 no estúdio.
+2. Abra **Campanhas → Criar campanha**. Informe nome e público, escolha estilo e encerramento, marque **Exigir minha aprovação por vídeo** e selecione o produto demonstrativo. Salve.
+3. Abra **Fila de revisão**. O vídeo antigo tem uma pendência de campanha. Clique **Recriar roteiro com a campanha atual**: isso substitui a edição anterior. Confira as cenas, autorize os materiais de demonstração e clique **Gerar MP4 agora**.
+4. Quando terminar, confira que as verificações estão concluídas e o estado é **Aguardando aprovação**. Assista à prévia e aprove. O modo tester continuará bloqueando qualquer publicação externa.
+5. Solicite ajustes: o vídeo deve ficar bloqueado. Aprovar novamente libera a revisão local quando todas as verificações passam.
+6. Edite o roteiro, ou altere o público da campanha. A aprovação antiga não deve continuar válida. Recrie e gere novamente para aplicar a nova direção editorial.
+7. Teste os filtros, inclusive um sem registros, e confira a navegação em uma janela estreita. No celular, role a faixa de ícones horizontalmente para acessar todos os destinos.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T12 | Criar campanha e vincular produto | Campanha persistida com os campos escolhidos. |
+| T13 | Gerar vídeo com revisão manual | Verificações concluídas; aprovação pendente. |
+| T14 | Aprovar e solicitar ajustes | Estados coerentes; no tester nenhum envio externo. |
+| T15 | Mudar roteiro ou campanha | Aprovação anterior deixa de valer. |
+| T16 | Verificar MP4 de versão anterior | Decodificação e conferência do arquivo ou erro com instrução de recuperação. |
+
+O botão **Recriar roteiro** exige nova geração do vídeo e não serve para substituir arquivos já enviados ao YouTube. Pausar uma campanha não garante cancelar agendamentos no destino; essa conferência deve ser feita no YouTube Studio em uma validação real.

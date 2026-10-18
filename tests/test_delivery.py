@@ -21,6 +21,8 @@ class DeliveryTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.override=patch.object(core,'DATA',Path(self.temp.name));self.override.start()
         core.init();autopilot.init();catalog.init();yt.init()
+        # These fixtures test remote transitions; real media gates have their own tests.
+        self.editorial=patch('quality.inspect',return_value={'allowed':True});self.editorial.start();self.addCleanup(self.editorial.stop)
         content_engine.configure({'mode':'rules','format':'landscape'})
         self.item={'id':'sku-1','name':'Organizador de mesa','description':'Possui três divisórias. Material em madeira. Medidas: 20 x 15 cm.',
                    'affiliate_url':'https://example.com/oferta?afiliado=meu-id','kind':'physical','category':'Casa'}

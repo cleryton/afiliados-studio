@@ -78,6 +78,8 @@ def init():
             recorded=" AND (clicks>0 OR revenue>0 OR id NOT IN ("+' UNION '.join(sources)+"))" if sources else ''
             c.execute("UPDATE jobs SET results_recorded_at=updated_at WHERE status='published'"+recorded)
         c.execute("UPDATE jobs SET status='error', error='A geração foi interrompida. Tente gerar novamente.', updated_at=? WHERE status='rendering'", (stamp(),))
+    import campaigns,quality
+    campaigns.init();quality.init()
 
 
 def clean(value, maximum=300, required=False):
@@ -336,6 +338,12 @@ def get_job(jid):
     return dict(row)
 
 
+def ensure_no_buffer_send(c,jid):
+    if c.execute("SELECT 1 FROM sqlite_master WHERE name='auto_jobs'").fetchone():
+        sent=c.execute("SELECT 1 FROM auto_jobs WHERE job_id=? AND (delivery!='local' OR buffer_id!='')",(jid,)).fetchone()
+        if sent:raise ValueError('Este vídeo possui tentativa de envio ao Buffer. Confira o destino antes de alterar o conteúdo.')
+
+
 def edit_job(jid, payload):
     scenes = payload.get('scenes')
     if not isinstance(scenes, list) or not 4<=len(scenes)<=7:
@@ -365,12 +373,14 @@ def edit_job(jid, payload):
             raise ValueError('Vídeo não encontrado.')
         if old['status'] in ('rendering', 'queued', 'published'):
             raise ValueError('Este vídeo está em processamento ou já foi publicado.')
+        ensure_no_buffer_send(c,jid)
         if c.execute("SELECT 1 FROM sqlite_master WHERE name='youtube_jobs'").fetchone():
             remote=c.execute('SELECT stage,video_id FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
             if remote and (remote['video_id'] or remote['stage'] not in ('failed','held_local')):
                 raise ValueError('Este vídeo já possui envio no YouTube. Gerencie a publicação pelo YouTube Studio.')
             if remote:c.execute('DELETE FROM youtube_jobs WHERE job_id=?',(jid,))
         c.execute('UPDATE jobs SET scenes=?,caption=?,due_at=?,status=?,rights=?,error=?,updated_at=? WHERE id=?', (json.dumps(scenes, ensure_ascii=False), caption, date.isoformat(), status, int(rights), '', stamp(), jid))
+        c.execute('DELETE FROM editorial_reviews WHERE job_id=?',(jid,))
         if json.loads(old['scenes'])!=scenes or old['caption']!=caption:
             meta_row=c.execute('SELECT payload FROM content_meta WHERE job_id=?',(jid,)).fetchone()
             if meta_row:
@@ -403,6 +413,28 @@ def record_results(jid, payload):
         c.execute("UPDATE jobs SET status='published',published_at=?,tiktok_url=?,views=?,clicks=?,revenue=?,updated_at=?,results_recorded_at=? WHERE id=?", (published.isoformat(), url, views, clicks, revenue, stamp(),stamp(), jid))
 
 
+def regenerate_job(jid):
+    """Explicitly replace an editable script with current product/campaign data."""
+    import content_engine
+    old=get_job(jid)
+    if old['status'] not in ('draft','ready','error','scheduled'):raise ValueError('Aguarde o processamento antes de recriar o roteiro.')
+    with db() as c:product=dict(c.execute('SELECT * FROM products WHERE id=?',(old['product_id'],)).fetchone())
+    scenes,caption,meta=content_engine.generate(product)
+    with db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        current=c.execute('SELECT updated_at,status FROM jobs WHERE id=?',(jid,)).fetchone()
+        if current['updated_at']!=old['updated_at'] or current['status']!=old['status']:raise ValueError('O vídeo mudou. Atualize a página antes de recriar.')
+        ensure_no_buffer_send(c,jid)
+        if c.execute("SELECT 1 FROM sqlite_master WHERE name='youtube_jobs'").fetchone():
+            remote=c.execute('SELECT stage,video_id FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
+            if remote and (remote['video_id'] or remote['stage'] not in ('failed','held_local')):raise ValueError('Este vídeo possui envio externo. Gerencie pelo YouTube Studio.')
+            c.execute('DELETE FROM youtube_jobs WHERE job_id=?',(jid,))
+        c.execute("UPDATE jobs SET scenes=?,caption=?,status='draft',rights=0,voice=0,error='',updated_at=? WHERE id=?",(json.dumps(scenes,ensure_ascii=False),caption,stamp(),jid))
+        c.execute('INSERT INTO content_meta VALUES (?,?) ON CONFLICT(job_id) DO UPDATE SET payload=excluded.payload',(jid,json.dumps(meta,ensure_ascii=False)))
+        c.execute('DELETE FROM media_validations WHERE job_id=?',(jid,))
+        c.execute('DELETE FROM editorial_reviews WHERE job_id=?',(jid,))
+
+
 def state():
     with db() as c:
         products = [dict(r) for r in c.execute('SELECT * FROM products ORDER BY created_at DESC')]
@@ -412,4 +444,6 @@ def state():
         j['scenes'] = json.loads(j['scenes'])
         j['content']=meta.get(j['id'])
         j['video_url'] = f"/media/{j['id']}/video.mp4?v={j['updated_at']}" if j['status'] in ('ready', 'published') else None
+        import quality
+        j['quality']=quality.inspect(j['id'])
     return {'products': products, 'jobs': jobs, 'suggestion': suggestion(), 'next_slot': next_slot(), 'timezone': 'America/Sao_Paulo', 'posting': {'connected': False, 'mode': 'manual', 'reason': 'A API direta do TikTok não aceita ferramentas de uso pessoal restrito. Exporte o MP4 e publique pelo TikTok.'}}

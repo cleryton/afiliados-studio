@@ -32,6 +32,7 @@ class AutomationTests(unittest.TestCase):
         autopilot.configure({'enabled':True,'daily_limit':1,'cooldown_days':7,'hours':[12,18,20]})
 
     def ready(self):
+        self.editorial=patch('quality.inspect',return_value={'allowed':True});self.editorial.start();self.addCleanup(self.editorial.stop)
         self.approve();self.enable();jid=autopilot.cycle()
         with core.db() as c:c.execute("UPDATE jobs SET status='ready' WHERE id=?",(jid,))
         autopilot.put_settings({'send_drafts':True,'channel_id':'channel-test'})

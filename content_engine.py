@@ -98,7 +98,7 @@ def validate_plan(plan,facts):
     return hook,order,angle
 
 
-def ollama_plan(product,facts,variant,model):
+def ollama_plan(product,facts,variant,model,campaign=None):
     schema={'type':'object','properties':{'hook':{'type':'string','maxLength':110},
              'fact_order':{'type':'array','items':{'type':'integer'},'minItems':len(facts),'maxItems':len(facts)},
              'angle':{'type':'string','enum':ANGLES}},'required':['hook','fact_order','angle'],'additionalProperties':False}
@@ -107,7 +107,7 @@ def ollama_plan(product,facts,variant,model):
             'sem afirmar benefícios, resultados, preço, descontos, urgência ou experiência de uso. '
             'Não invente fatos. Não inclua links. Você apenas escolhe a pergunta e a ordem dos fatos numerados, '
             'usando cada índice exatamente uma vez. As características serão copiadas pelo programa, não reescritas.')
-    prompt=json.dumps({'product':product['name'],'category':product['category'],'facts':dict(enumerate(facts)),'variant':variant,'angles':ANGLES},ensure_ascii=False)
+    prompt=json.dumps({'product':product['name'],'category':product['category'],'facts':dict(enumerate(facts)),'variant':variant,'angles':ANGLES,'editorial_brief':campaign},ensure_ascii=False)
     payload={'model':model,'system':system,'prompt':prompt,'format':schema,'stream':False,'think':False,
              'keep_alive':'2m','options':{'temperature':.7,'num_ctx':2048,'num_predict':256,'seed':variant+23}}
     request=Request(LOCAL_URL+'/api/generate',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'})
@@ -116,7 +116,14 @@ def ollama_plan(product,facts,variant,model):
     return validate_plan(json.loads(result.get('response','')),facts)
 
 
+def product_fingerprint(product):
+    fields={key:product.get(key,'') for key in ('name','url','description','image','category','kind')}
+    return hashlib.sha256(json.dumps(fields,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+
+
 def generate(product,variant=0,config=None):
+    import campaigns
+    campaign=campaigns.for_product(product.get('id'))
     config=config or settings()
     facts=facts_from(product.get('description',''))
     if not facts:
@@ -124,6 +131,12 @@ def generate(product,variant=0,config=None):
     order=list(range(len(facts)))
     if variant%2:order.reverse()
     hook=HOOKS[variant%len(HOOKS)];angle=ANGLES[variant%len(ANGLES)]
+    if campaign:
+        hook={'direto':'Quais características você procura neste produto?',
+              'educativo':'O que conferir antes de escolher este produto?',
+              'comparativo':'Quais detalhes comparar antes da sua escolha?'}[campaign['tone']]
+        if campaign['audience']:
+            hook='Você busca opções para '+campaign['audience'].rstrip('.?!')+'?'
     engine='rules';model='';note='Conteúdo organizado localmente a partir das características cadastradas.'
     if config['mode']!='rules':
         status=availability()
@@ -131,14 +144,19 @@ def generate(product,variant=0,config=None):
         selected=config.get('model') or (status['models'][0]['name'] if status['models'] else '')
         if status['available'] and selected in available:
             try:
-                hook,order,angle=ollama_plan(product,facts,variant,selected)
+                hook,order,angle=ollama_plan(product,facts,variant,selected,campaign)
                 engine='ollama';model=selected;note='Abertura e ordem criadas com IA local. Características copiadas do cadastro.'
             except (OSError,ValueError,TypeError,KeyError):
                 note='A IA local não respondeu ou o plano não passou na validação. Usado gerador local de características.'
         else:
             note='Ollama ou modelo local indisponível. Usado gerador local de características, sem serviços pagos.'
     chosen=[facts[index] for index in order]
-    scenes=[hook,'Conheça: '+product['name'],*chosen,CTAS[variant%len(CTAS)]]
+    cta=CTAS[variant%len(CTAS)]
+    if campaign:
+        cta={'detalhes':'Confira os detalhes completos e as condições atuais na página do produto.',
+             'comparar':'Compare estas características com suas necessidades. Confira o link na descrição.',
+             'conhecer':'Conheça a descrição completa na página do produto. O link está na descrição.'}[campaign['cta']]
+    scenes=[hook,'Conheça: '+product['name'],*chosen,cta]
     caption=hook+'\n\n'+product['name']+'\n\n'+'\n'.join('• '+f for f in chosen)
     caption+='\n\nPublicidade · Posso receber comissão por compras elegíveis.\n\n#produtos #achadinhos #publicidade'
     link='\n\nLink do produto: '+product['url']
@@ -147,7 +165,7 @@ def generate(product,variant=0,config=None):
     caption+=link
     if len(caption)>2200:raise ValueError('Use um link oficial de afiliado mais curto para caber na legenda.')
     meta={'engine':engine,'model':model,'note':note,'angle':angle,'facts':chosen,'source_hash':hashlib.sha256(product.get('description','').encode()).hexdigest(),
-          'scene_count':len(scenes),'generated_at':core.stamp(),'palette':variant%3,'format':settings()['format']}
+          'scene_count':len(scenes),'generated_at':core.stamp(),'palette':variant%3,'format':config.get('format',settings()['format']),'campaign':campaign,'product_hash':product_fingerprint(product)}
     return scenes,caption,meta
 
 

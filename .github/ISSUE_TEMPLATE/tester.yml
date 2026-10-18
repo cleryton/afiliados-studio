@@ -9,7 +9,7 @@ body:
     id: version
     attributes:
       label: Versão e modo
-      placeholder: "0.3.0-tester · modo tester"
+      placeholder: "0.4.0-beta · modo tester"
     validations:
       required: true
   - type: input

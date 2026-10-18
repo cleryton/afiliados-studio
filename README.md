@@ -2,7 +2,7 @@
 
 Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas, e integra o envio e agendamento ao YouTube pela API oficial. Sem assinatura de IA ou hospedagem. Energia e internet continuam sendo custos da operação.
 
-**Situação atual:** versão 0.3.0-tester. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.4.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -31,6 +31,16 @@ Abra http://127.0.0.1:8765/#start. Mantenha o programa aberto e o notebook ligad
 6. Clique **Iniciar criação e publicação automática**. A publicação será pública no canal conectado. No primeiro início, a rotina começa em até um minuto: prepara um vídeo por dia às 18h de Brasília, com antecedência de até três vídeos. Ao retomar, mantém seus ajustes de ritmo e geração. O horário é um ponto inicial de teste, sem evidência de que seja o melhor para seu público. Ajustes ficam em **Modo automático**.
 
 Projetos OAuth externos com status **Testing** recebem refresh tokens que expiram em 7 dias para este escopo. Reconecte quando solicitado. Para operação contínua, configure o status do aplicativo no Google conforme as exigências aplicáveis; sair do modo de teste e verificações são gerenciados no Google Cloud. Documentação: [expiração de tokens](https://developers.google.com/identity/protocols/oauth2#expiration), [autorização para aplicativos desktop](https://developers.google.com/identity/protocols/oauth2/native-app), [envio de vídeos](https://developers.google.com/youtube/v3/docs/videos/insert).
+
+## Campanhas e revisão editorial
+
+Em **Campanhas**, defina o público ou contexto, o estilo da abertura e o encerramento. Vincule produtos e escolha se o sistema pode continuar após as verificações ou se exige aprovação de cada vídeo. Um produto pertence a uma campanha por vez. Produtos sem campanha continuam com a configuração padrão. A campanha não aprova sua afiliação nem substitui a autorização dos materiais.
+
+A **Fila de revisão** reúne prévia, estado real e verificações: roteiro, link preservado, publicidade, autorização, dados atuais, campanha ativa e MP4. Cada nova renderização decodifica o arquivo e confere dimensões e duração. Arquivos de versões anteriores podem ser conferidos em **Verificar arquivo**. Isso confere a consistência técnica e os dados cadastrados; não avalia a veracidade de todas as alegações nem prevê vendas.
+
+Na revisão manual, clique **Aprovar vídeo** depois de assistir. **Solicitar ajustes** bloqueia a continuidade. Mudar roteiro, produto, campanha ou arquivo invalida a aprovação; o envio recalcula a assinatura do MP4. **Recriar roteiro com a campanha atual** substitui a edição local anterior e exige nova revisão dos materiais e geração do MP4. A rotina também refaz dados desatualizados antes do primeiro upload. Vídeos com envio externo não podem ser substituídos localmente.
+
+Pausar a campanha impede novas seleções e envios pelo sistema. Enquanto a rotina continua ativa, alterações ou revisão pendente podem reter um vídeo já enviado como privado na próxima consulta. Isso depende de conexão e resposta do Google: **confira e cancele agendamentos já enviados diretamente no YouTube Studio**. A pausa global interrompe as consultas locais e não cancela agendamentos remotos.
 
 ## Conferir a operação
 

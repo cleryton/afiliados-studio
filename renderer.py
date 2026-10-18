@@ -168,6 +168,8 @@ def render(job, product):
         subtitles.append(f'{index+1}\n{timestamp(elapsed)} --> {timestamp(elapsed+duration)}\n{scene}\n');elapsed+=duration
     (directory/'legendas.srt').write_text('\n'.join(subtitles),encoding='utf-8')
     (directory/'conteudo.json').write_text(json.dumps({**metadata,'scenes':scenes,'caption':job['caption'],'durations':durations,'voice':all(voices)},ensure_ascii=False,indent=2),encoding='utf-8')
+    import quality
+    quality.validate_media(job['id'])
     for index in range(len(scenes)):
         for name in (f'speech-{index}.json', f'speech-{index}.wav', f'clip-{index}.mp4'):
             (directory / name).unlink(missing_ok=True)

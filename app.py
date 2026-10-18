@@ -18,6 +18,8 @@ import catalog
 import youtube_client
 import diagnostics
 import support
+import campaigns
+import quality
 from version import VERSION
 
 TOKEN = secrets.token_urlsafe(32)
@@ -143,13 +145,13 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == '/api/state':
                 import content_engine
-                return self.respond(200, {**core.state(), 'token': TOKEN, 'automation':autopilot.state(),'content':content_engine.state(),'catalog':catalog.state(),'youtube':youtube_client.state(),'setup':readiness(),'operation':diagnostics.state(),'mode':{'tester':core.TESTER,'version':VERSION,'publishing_allowed':not core.TESTER}})
+                return self.respond(200, {**core.state(), 'token': TOKEN, 'automation':autopilot.state(),'campaigns':campaigns.state(),'content':content_engine.state(),'catalog':catalog.state(),'youtube':youtube_client.state(),'setup':readiness(),'operation':diagnostics.state(),'mode':{'tester':core.TESTER,'version':VERSION,'publishing_allowed':not core.TESTER}})
             if path=='/api/support/report':
                 return self.respond(200,support.report())
             if path == '/api/export':
                 state = core.state()
                 automation=autopilot.state()
-                return self.respond(200, {'version': 2, 'exported_at': core.stamp(), 'products': state['products'], 'jobs': state['jobs'], 'expenses':automation['expenses'], 'auto_products':automation['products']})
+                return self.respond(200, {'version': 3, 'campaigns':campaigns.state(), 'exported_at': core.stamp(), 'products': state['products'], 'jobs': state['jobs'], 'expenses':automation['expenses'], 'auto_products':automation['products']})
             if path.startswith('/media/'):
                 if not re.fullmatch(r'/media/(?:diagnostics/(?:video\.mp4|poster\.png)|[a-f0-9]{32}\.jpg|[a-f0-9]{32}/(?:video\.mp4|scene-[0-6]\.png|legenda\.txt|legendas\.srt|conteudo\.json))', path):
                     return self.respond(404, {'error': 'Arquivo não encontrado.'})
@@ -157,7 +159,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 if path=='/manual-tester.md':
                     return self.send_file(core.ROOT/'docs'/'MANUAL_TESTER.md')
-                allowed = {'/': 'index.html', '/app.js': 'app.js', '/setup.js':'setup.js', '/automation.js':'automation.js', '/style.css': 'style.css', '/automation.css':'automation.css'}
+                allowed = {'/': 'index.html', '/app.js': 'app.js', '/setup.js':'setup.js', '/automation.js':'automation.js', '/style.css': 'style.css', '/automation.css':'automation.css','/professional.js':'professional.js','/professional.css':'professional.css'}
                 if path not in allowed:
                     return self.respond(404, {'error': 'Página não encontrada.'})
                 file = core.ROOT / 'web' / allowed[path]
@@ -227,6 +229,18 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('O modo tester bloqueia contas e envios externos. Use a demonstração local; a publicação real exige iniciar.bat.')
             if path=='/api/tester/demo':
                 return self.respond(201,support.create_demo())
+            if path=='/api/campaigns':
+                return self.respond(201,{'id':campaigns.save(payload)})
+            campaign_match=re.fullmatch(r'/api/campaigns/([a-f0-9]{32})',path)
+            if campaign_match:
+                return self.respond(200,{'id':campaigns.save(payload,campaign_match[1])})
+            editorial_match=re.fullmatch(r'/api/quality/([a-f0-9]{32})/(validate|review|regenerate)',path)
+            if editorial_match:
+                jid,action=editorial_match.groups()
+                if action=='validate':result=quality.validate_media(jid)
+                elif action=='review':result=quality.decide(jid,payload)
+                else:core.regenerate_job(jid);result={'ok':True}
+                return self.respond(200,result)
             if path=='/api/diagnostics/test':
                 return self.respond(202,diagnostics.start_probe())
             if path=='/api/youtube/verify':

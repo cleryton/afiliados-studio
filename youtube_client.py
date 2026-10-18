@@ -201,7 +201,7 @@ def update_job(jid,**values):
 
 def process(job,product):
     if core.TESTER:return
-    import autopilot,catalog
+    import autopilot,catalog,campaigns,quality
     jid=job['id'];config=settings()
     with core.db() as c:row=c.execute('SELECT * FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
     if row and row['stage'] in ('uncertain','failed','published'):return
@@ -213,8 +213,15 @@ def process(job,product):
             meta=c.execute('SELECT payload FROM content_meta WHERE job_id=?',(jid,)).fetchone()
             authorization=c.execute('SELECT active,approved FROM auto_products WHERE product_id=?',(product['id'],)).fetchone()
         expected=json.loads(meta['payload']).get('source_hash') if meta else None
+        brief=campaigns.for_product(product['id'])
+        previous_brief=json.loads(meta['payload']).get('campaign') if meta else None
         changed=expected and expected!=hashlib.sha256(product.get('description','').encode()).hexdigest()
+        import content_engine
+        prior_product=json.loads(meta['payload']).get('product_hash') if meta else None
+        changed=changed or bool(prior_product and prior_product!=content_engine.product_fingerprint(product))
+        changed=changed or (brief or {}).get('revision')!=(previous_brief or {}).get('revision')
         approved=authorization and authorization['active'] and authorization['approved'] and catalog.eligible(product['id'])
+        approved=approved and (not brief or brief['active'])
         changed=changed or product['url'] not in job['caption'] or product['name'] not in job['caption']
         if row and row['stage']=='held_local' and approved:
             with core.db() as c:c.execute('DELETE FROM youtube_jobs WHERE job_id=?',(jid,))
@@ -239,10 +246,22 @@ def process(job,product):
                 update_job(jid,stage='held')
             raise ValueError('Produto pausado, catálogo vencido ou dados alterados. Publicação retida; confira o catálogo e o YouTube Studio.')
         if row and row['stage']=='held':
+            if not quality.inspect(jid,verify_media=True)['allowed']:return
             update_job(jid,stage='processing',error='')
+            return
+        review=quality.inspect(jid,verify_media=True)
+        if not review['allowed']:
+            if row:
+                if row['video_id'] and row['stage'] in ('processing','scheduled'):
+                    api('videos?part=status',{'id':row['video_id'],'status':{'privacyStatus':'private','selfDeclaredMadeForKids':False}},'PUT')
+                    update_job(jid,stage='held',error='Publicação retida pelas verificações editoriais. Confira a fila de revisão.')
+                else:update_job(jid,error='Envio aguardando verificações editoriais. Confira a fila de revisão.')
             return
         if not row:
             with core.db() as c:c.execute('INSERT INTO youtube_jobs(job_id,stage,updated_at) VALUES (?,?,?)',(jid,'initializing',core.stamp()))
+            if not quality.inspect(jid,verify_media=True)['allowed']:
+                with core.db() as c:c.execute("DELETE FROM youtube_jobs WHERE job_id=? AND stage='initializing'",(jid,))
+                return
             try:initialize_upload(job,product,file)
             except Exception as error:
                 update_job(jid,stage='uncertain',error=str(error)[:500]);return

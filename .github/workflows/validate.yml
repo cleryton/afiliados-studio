@@ -22,4 +22,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
-      - run: python -m compileall -q app.py core.py support.py bootstrap.py diagnostics.py youtube_client.py autopilot.py
+      - run: python -m compileall -q app.py core.py support.py bootstrap.py diagnostics.py youtube_client.py autopilot.py campaigns.py quality.py content_engine.py renderer.py
+      - run: node --check web/professional.js
