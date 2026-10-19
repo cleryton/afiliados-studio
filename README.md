@@ -1,5 +1,7 @@
 # Afiliados Studio
 
+[![Validadores](https://github.com/cleryton/afiliados-studio/actions/workflows/validate.yml/badge.svg)](https://github.com/cleryton/afiliados-studio/actions/workflows/validate.yml)
+
 Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas, e integra o envio e agendamento ao YouTube pela API oficial. Sem assinatura de IA ou hospedagem. Energia e internet continuam sendo custos da operação.
 
 **Situação atual:** versão 0.4.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
@@ -8,7 +10,7 @@ Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas,
 
 Comece por [docs/MANUAL_TESTER.md](docs/MANUAL_TESTER.md). Execute **instalar.bat** uma vez e depois **iniciar_tester.bat**. Esse modo usa um banco separado em data-tester e bloqueia contas e envios externos. Uma demonstração completa pode ser criada pelo painel, sem afiliado ou Google. O manual também está no link Manual no topo da aplicação.
 
-Para relatar falhas, use **Manual → Baixar diagnóstico sem credenciais** e o formulário de Issues do repositório. A validação do GitHub Actions é manual, para que o responsável controle o consumo de minutos da conta.
+Para relatar falhas, use **Manual → Baixar diagnóstico sem credenciais** e o formulário de Issues do repositório. As verificações rodam automaticamente no GitHub a cada push e pull request: testes Windows, sintaxe, privacidade, pacote, Ruff, Gitleaks e auditoria de dependências. Consulte [docs/VALIDACAO.md](docs/VALIDACAO.md). Em um clone Git, **validar.bat** executa as verificações locais e os testes sem abrir o aplicativo.
 
 ## Abrir
 

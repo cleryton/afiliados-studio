@@ -1,5 +1,13 @@
 # Alterações
 
+## Repositório e validadores — 19/10/2026
+
+- Repositório público após varredura do histórico e dos pacotes publicados.
+- Verificações automáticas em pushes e pull requests, com testes Windows em Python 3.10, 3.11 e 3.12.
+- Validação local de fontes, recursos do painel, histórico de caminhos privados e integridade do pacote.
+- Ruff, Gitleaks e pip-audit em etapas próprias; atualizações de dependências propostas pelo Dependabot.
+- Guia dos validadores e comando validar.bat para clones Git.
+
 ## 0.4.0-beta — 18/10/2026
 
 - Campanhas com público, estilo, encerramento, pausa e revisão automática ou manual por vídeo.
