@@ -167,3 +167,25 @@ Em **Modo automático → Criação de conteúdo**, selecione roteiro curto e vo
 | T22 | Ler uma página pública com um único produto em JSON-LD | Nome e características explícitas sugeridos, com origem informada; revise antes de salvar. Página bloqueada ou sem dados permite preenchimento manual, preservando seu link. |
 
 Sem uma voz pt-BR instalada, o vídeo continua com texto e o aviso de ausência de narração. A mudança de ritmo só afeta a voz quando ela está disponível. O modo tester mantém todo envio externo bloqueado.
+
+## 12. Testar vídeo e continuidade da operação (0.6)
+
+Escolha **Modo automático → Texto na tela → Trechos curtos**, salve, recrie um roteiro de teste e gere novamente. Assista a uma cena longa: o texto deve mudar durante a cena, preservando a sequência do roteiro. O tempo é aproximado, sem alinhamento exato por palavra. Compare com **Cena completa** em um segundo roteiro. Abra **Começar → Fila de produção** para conferir os estados reais e motivos de retenção.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T23 | Gerar trecho longo nos dois formatos | O texto muda dentro do MP4, sem perder palavras; SRT e metadados correspondem ao roteiro. |
+| T24 | Pausar um produto automático antes de ele começar | A fila o retém e mostra o motivo; outro trabalho elegível pode continuar. |
+| T25 | Alterar dados da fonte antes de renderizar | Roteiro automático sem edição é atualizado; edição manual é preservada e pede recriação. |
+| T26 | Fechar durante uma geração automática local e reabrir | Retomada programada com espera de 2 ou 10 minutos; após três falhas, exige atenção. |
+| T27 | Interromper um vídeo manual | Fica com erro recuperável; não é retomado por conta própria. |
+| T28 | Abrir o mesmo modo duas vezes | Segunda instância rejeitada antes de tocar no banco; a primeira continua operando. |
+| T29 | Encerrar e reabrir normalmente | Trava liberada pelo sistema operacional; dados preservados. |
+
+T24–T26 exigem produtos de teste autorizados na rotina local. O modo tester bloqueia publicações mesmo com a geração automática ativa. Não use contas reais. Tentativas já enviadas a um destino externo nunca fazem parte da recuperação automática. Não é necessário provocar três falhas no notebook: essa condição também é coberta pelos testes automatizados.
+
+## 13. Métricas do YouTube (0.6)
+
+O modo tester não consulta métricas externas. Em **Resultados**, confira que cliques e comissões ainda não informados não aparecem como zeros confirmados. Na operação real, a leitura de visualizações, curtidas e comentários exige canal conectado e rotina ativa; somente vídeos confirmados como publicados pelo sistema são consultados. Ela não identifica cliques de afiliado nem vendas.
+
+Em um teste posterior com conta real autorizada, confira a data de leitura na tabela e compare com o YouTube Studio, considerando o atraso de atualização da API. Não é necessário esperar seis horas para validar respostas ausentes ou falhas: os testes automatizados cobrem esses casos com respostas simuladas. Uma falha não deve apagar a última contagem nem alterar cliques e comissões. Desconectar remove o cache de métricas. Sem conta real, a integração continua pendente de validação externa.

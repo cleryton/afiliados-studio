@@ -39,6 +39,8 @@ def init():
         c.executescript('''CREATE TABLE IF NOT EXISTS youtube_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS youtube_jobs(job_id TEXT PRIMARY KEY REFERENCES jobs(id),stage TEXT NOT NULL,video_id TEXT NOT NULL DEFAULT '',error TEXT NOT NULL DEFAULT '',updated_at TEXT NOT NULL,next_check TEXT);''')
         c.execute("UPDATE youtube_jobs SET stage='uncertain',error='O programa encerrou durante a criação do envio. Confira o YouTube Studio antes de tentar novamente.' WHERE stage='initializing'")
+    import insights
+    insights.init()
 
 
 def settings():
@@ -323,11 +325,14 @@ def tick():
         rows=c.execute("SELECT jobs.* FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status='ready' ORDER BY due_at LIMIT 3").fetchall()
         products={r['id']:dict(r) for r in c.execute('SELECT * FROM products')}
     for row in rows:process(dict(row),products[row['product_id']])
+    import insights
+    insights.sync()
 
 
 def disconnect():
     put({'enabled':False,'channel_id':'','channel_name':'','channel_verified':False,'last_verified_at':None})
     secret_path('tokens').unlink(missing_ok=True)
+    with core.db() as c:c.execute('DELETE FROM youtube_metrics')
     with _lock:_pending.clear()
 
 
@@ -357,6 +362,7 @@ def reconcile(jid,video_id):
 
 
 def state():
+    import insights
     with core.db() as c:rows=[dict(r) for r in c.execute('SELECT * FROM youtube_jobs ORDER BY updated_at DESC')]
-    return {'settings':settings(),'client_configured':secret_path('client').is_file(),'connected':secret_path('tokens').is_file() and bool(settings()['channel_id']),'jobs':rows,
+    return {'settings':settings(),'client_configured':secret_path('client').is_file(),'connected':secret_path('tokens').is_file() and bool(settings()['channel_id']),'jobs':rows,'metrics':insights.state(),
             'notice':'Envio direto pela API oficial, com autorização inicial Google. Projetos e contas estão sujeitos a permissões, processamento e cotas do YouTube.'}

@@ -187,7 +187,7 @@ def cycle():
             return None
         c.execute('INSERT INTO jobs (id,product_id,status,scenes,caption,due_at,created_at,updated_at,rights) VALUES (?,?,?,?,?,?,?,?,1)',(jid,product['id'],'queued',json.dumps(scenes,ensure_ascii=False),caption,slot.isoformat(),core.stamp(),core.stamp()))
         c.execute('INSERT INTO auto_jobs (job_id,variant) VALUES (?,?)',(jid,product['variant']))
-    content_engine.save(jid,meta)
+        c.execute('INSERT INTO content_meta VALUES (?,?)',(jid,json.dumps(meta,ensure_ascii=False)))
     event('production',f"Roteiro criado automaticamente: {product['name']}. Variação {product['variant']+1}.",jid)
     put_settings({'last_cycle':core.stamp(),'status':'Produção automática em andamento. Confira o acompanhamento de publicação na página Começar.'})
     return jid
@@ -200,16 +200,21 @@ def delivery_cycle(media_url):
     if not config['enabled'] or not config['send_drafts'] or not config['channel_id']:
         return
     with core.db() as c:
-        rows=c.execute("SELECT jobs.* FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status='ready' AND delivery='local' LIMIT 1").fetchall()
+        rows=c.execute("SELECT jobs.* FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status='ready' AND delivery='local' ORDER BY jobs.due_at,jobs.id").fetchall()
     for job in rows:
-        import quality
+        import quality,production
+        with core.db() as c:
+            if production.block_reason(c,job):continue
         if not quality.inspect(job['id'],verify_media=True)['allowed']:continue
         # Build media access before claiming the external send. Failure here is safe to retry.
         url=media_url(job['id'])
         with core.db() as c:
+            c.execute('BEGIN IMMEDIATE')
+            if production.block_reason(c,job):continue
             if not c.execute("UPDATE auto_jobs SET delivery='sending' WHERE job_id=? AND delivery='local'",(job['id'],)).rowcount:
                 continue
-        if not quality.inspect(job['id'])['allowed']:
+        with core.db() as c:paused=production.block_reason(c,job,claimed_buffer=True)
+        if paused or not quality.inspect(job['id'])['allowed']:
             with core.db() as c:c.execute("UPDATE auto_jobs SET delivery='local' WHERE job_id=? AND delivery='sending'",(job['id'],))
             continue
         try:
@@ -267,12 +272,21 @@ def expense(payload):
         c.execute('INSERT INTO expenses VALUES (?,?,?,?)',(uuid4().hex,core.stamp(),description,amount))
 
 
-def render_failed(jid):
+def render_failed(jid, only_interrupted=False):
     """Only local rendering is retried. Never repeat an uncertain external send."""
     with core.db() as c:
-        row=c.execute('SELECT render_failures FROM auto_jobs WHERE job_id=?',(jid,)).fetchone()
-        if not row:
+        c.execute('BEGIN IMMEDIATE')
+        row=c.execute('SELECT * FROM auto_jobs WHERE job_id=?',(jid,)).fetchone()
+        job=c.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+        if not row or not job or job['status']!='error':
             return
+        import production
+        reason=production.block_reason(c,job)
+        if reason and (only_interrupted or reason[0] in ('external','rights')):return
+        if only_interrupted:
+            interrupted=c.execute('SELECT interrupted FROM render_state WHERE job_id=?',(jid,)).fetchone()
+            if not interrupted or not interrupted['interrupted']:return
+        c.execute('UPDATE render_state SET interrupted=0 WHERE job_id=?',(jid,))
         failures=row['render_failures']+1
         delay=2 if failures==1 else 10
         retry=(core.now()+timedelta(minutes=delay)).isoformat() if failures<3 else None

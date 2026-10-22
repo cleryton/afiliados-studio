@@ -15,7 +15,7 @@ import core
 import creative
 
 LOCAL_URL = 'http://127.0.0.1:11434'
-DEFAULTS = {'mode':'auto','model':'','format':'landscape','length':'complete','pace':'normal'}
+DEFAULTS = {'mode':'auto','model':'','format':'landscape','length':'complete','pace':'normal','presentation':'phrases'}
 _cache = {'at':0,'available':False,'models':[]}
 _lock = threading.Lock()
 ANGLES = ['O que observar', 'Detalhes em foco', 'Antes de escolher', 'Conheça as características']
@@ -63,12 +63,14 @@ def configure(payload):
     previous=settings()
     length=payload.get('length',previous['length']);pace=payload.get('pace',previous['pace'])
     if length not in ('complete','short') or pace not in ('normal','agil'):raise ValueError('Escolha uma extensão de roteiro e um ritmo de narração válidos.')
+    presentation=payload.get('presentation',previous['presentation'])
+    if presentation not in ('phrases','scene'):raise ValueError('Escolha uma apresentação de texto válida.')
     if 'cloud' in model.lower():
         raise ValueError('Escolha um modelo local. Modelos de nuvem não fazem parte do modo gratuito.')
     if mode=='ollama' and model not in {m['name'] for m in availability(force=True)['models']}:
         raise ValueError('Abra o Ollama com um modelo local disponível antes de selecionar esse modo.')
     with core.db() as c:
-        for key,value in {'mode':mode,'model':model,'format':video_format,'length':length,'pace':pace}.items():
+        for key,value in {'mode':mode,'model':model,'format':video_format,'length':length,'pace':pace,'presentation':presentation}.items():
             c.execute('INSERT INTO content_settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,json.dumps(value)))
 
 
@@ -178,7 +180,7 @@ def generate(product,variant=0,config=None):
     if len(caption)>2200:raise ValueError('Use um link oficial de afiliado mais curto para caber na legenda.')
     meta={'engine':engine,'model':model,'note':note,'angle':angle,'facts':chosen,'source_hash':hashlib.sha256(product.get('description','').encode()).hexdigest(),
           'scene_count':len(scenes),'generated_at':core.stamp(),'palette':variant%3,'format':config.get('format',settings()['format']),'campaign':campaign,'product_hash':product_fingerprint(product),
-          'creative_version':2,'length':config.get('length','complete'),'pace':config.get('pace','normal'),'source_fact_count':source_count,'reading':creative.reading(scenes,config.get('pace','normal'))}
+          'creative_version':3,'length':config.get('length','complete'),'pace':config.get('pace','normal'),'presentation':config.get('presentation','phrases'),'source_fact_count':source_count,'reading':creative.reading(scenes,config.get('pace','normal'))}
     return scenes,caption,meta
 
 

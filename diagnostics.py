@@ -118,7 +118,7 @@ def retry_render(jid):
 
 
 def state():
-    import autopilot,catalog,youtube_client
+    import autopilot,catalog,youtube_client,production
     resources=runtime();config=autopilot.settings();channel=youtube_client.state();test=report()
     options=autopilot.candidates(config,core.now())
     with core.db() as c:
@@ -140,6 +140,6 @@ def state():
     if options:
         p=options[0];next_product={'id':p['id'],'name':p['name'],'variant':p['variant']+1,'recorded_results':p['recorded_count'],
                                  'reason':'Primeiro conteúdo deste produto.' if not p['sample_count'] else 'Nova variação elegível; intervalo e limite por produto respeitados.'}
-    return {'checks':checks,'test':test,'errors':errors,'next_product':next_product,'timing':autopilot.timing(config),
+    return {'checks':checks,'test':test,'errors':errors,'next_product':next_product,'timing':autopilot.timing(config),'queue':production.queue(),
             'pending_results':sum(j['status']=='published' and not j['results_recorded_at'] for j in jobs),
             'runtime_ok':resources['renderer'] and resources['disk_ok']}

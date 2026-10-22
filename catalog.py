@@ -118,7 +118,7 @@ def tick():
 def eligible(pid):
     with core.db() as c:
         if not c.execute("SELECT 1 FROM sqlite_master WHERE name='catalog_items'").fetchone():return True
-        row=c.execute('SELECT active,last_seen FROM catalog_items WHERE product_id=?',(pid,)).fetchone()
+        row=c.execute('SELECT active,last_seen FROM catalog_items WHERE product_id=? ORDER BY active DESC,last_seen DESC LIMIT 1',(pid,)).fetchone()
     if not row:return True  # Manually authorized products retain their existing workflow.
     return bool(row['active']) and datetime.fromisoformat(row['last_seen'])>core.now()-timedelta(hours=24)
 

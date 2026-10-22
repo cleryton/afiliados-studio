@@ -97,6 +97,22 @@ class AutomationTests(unittest.TestCase):
             self.assertEqual(create.call_count,1)
         self.assertEqual(autopilot.state()['runs'][0]['delivery'],'uncertain')
 
+    def test_paused_product_does_not_share_media_or_send_buffer_draft(self):
+        jid=self.ready();pid=core.get_job(jid)['product_id']
+        autopilot.approve_product(pid,{'active':False,'approved':True})
+        with patch('buffer_client.create_draft') as send:
+            autopilot.delivery_cycle(lambda _:self.fail('Não compartilhe mídia de produto pausado.'))
+        send.assert_not_called()
+
+    def test_pause_during_media_preparation_prevents_buffer_send(self):
+        jid=self.ready();pid=core.get_job(jid)['product_id']
+        def media(_):
+            autopilot.approve_product(pid,{'active':False,'approved':True})
+            return 'https://example.com/video.mp4'
+        with patch('buffer_client.create_draft') as send:autopilot.delivery_cycle(media)
+        send.assert_not_called()
+        self.assertEqual(autopilot.state()['runs'][0]['delivery'],'local')
+
     def test_restart_marks_inflight_delivery_unknown(self):
         jid=self.ready()
         with core.db() as c:c.execute("UPDATE auto_jobs SET delivery='sending' WHERE job_id=?",(jid,))

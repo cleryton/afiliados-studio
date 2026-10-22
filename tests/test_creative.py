@@ -53,10 +53,11 @@ class CreativeTests(unittest.TestCase):
         self.assertNotIn('#achadinhos',tags);self.assertTrue(tags.endswith('#publicidade'))
 
     def test_content_options_are_validated_and_partial_updates_preserved(self):
-        content_engine.configure({'mode':'rules','length':'short','pace':'agil'})
+        content_engine.configure({'mode':'rules','length':'short','pace':'agil','presentation':'scene'})
         content_engine.configure({'mode':'auto','format':'landscape'})
         self.assertEqual(content_engine.settings()['length'],'short');self.assertEqual(content_engine.settings()['pace'],'agil')
-        for payload in [{'mode':'rules','length':'unknown'},{'mode':'rules','pace':'fastest'}]:
+        self.assertEqual(content_engine.settings()['presentation'],'scene')
+        for payload in [{'mode':'rules','length':'unknown'},{'mode':'rules','pace':'fastest'},{'mode':'rules','presentation':'invalid'}]:
             with self.assertRaises(ValueError):content_engine.configure(payload)
 
     def test_long_name_and_audience_stay_bounded(self):
@@ -85,6 +86,17 @@ class CreativeTests(unittest.TestCase):
     def test_invalid_subtitle_inputs_fail_clearly(self):
         with self.assertRaises(ValueError):creative.subtitle_segments(['texto'],[])
         with self.assertRaises(ValueError):creative.subtitle_segments([''],[4.5])
+
+    def test_phrase_cards_are_balanced_without_orphan_last_word(self):
+        scene='Para quem organiza uma mesa pequena, o que conferir em Organizador de mesa exemplo ilustrativo vertical?'
+        chunks=creative.subtitle_chunks(scene)
+        self.assertEqual(len(chunks),2)
+        self.assertTrue(all(len(chunk.split())>=4 for chunk in chunks))
+        self.assertLess(abs(len(chunks[0])-len(chunks[1])),25)
+        self.assertEqual(' '.join(' '.join(chunk.split()) for chunk in chunks),scene)
+        scene='Organizador de mesa exemplo ilustrativo para quem organiza uma mesa pequena: quais detalhes observar?'
+        chunks=creative.subtitle_chunks(scene)
+        self.assertNotIn(chunks[0].split()[-1],('para','quem','de','uma'))
 
     def test_manual_edits_refresh_reading_estimate(self):
         pid=core.save_product(self.product);jid=core.create_job({'product_id':pid});job=core.get_job(jid)

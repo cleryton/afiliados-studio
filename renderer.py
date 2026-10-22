@@ -122,6 +122,18 @@ def landscape_frame(product,text,index,destination,total=4,palette=0,angle='O qu
 
 
 def render(job, product):
+    try:
+        return _render(job,product)
+    finally:
+        directory=core.DATA/'media'/job['id']
+        names=['segments.txt','building.mp4']
+        for index in range(7):names.extend([f'speech-{index}.json',f'speech-{index}.wav',f'clip-{index}.mp4',f'cards-{index}.txt'])
+        for name in names:
+            try:(directory/name).unlink(missing_ok=True)
+            except OSError:pass
+
+
+def _render(job, product):
     import imageio_ffmpeg
     directory = core.DATA / 'media' / job['id']
     directory.mkdir(exist_ok=True)
@@ -157,14 +169,31 @@ def render(job, product):
         raise ValueError('O roteiro ficou longo demais. Reduza o texto e gere novamente.')
     exe = imageio_ffmpeg.get_ffmpeg_exe()
     segments = []
+    subtitles=creative.subtitle_segments(scenes,durations)
+    phrases=metadata.get('presentation','scene')=='phrases'
     for index, duration in enumerate(durations):
         segment = directory / f'clip-{index}.mp4'
-        command = [exe, '-y', '-hide_banner', '-loglevel', 'error', '-loop', '1', '-framerate', '24', '-i', str(directory / f'scene-{index}.png')]
+        command = [exe, '-y', '-hide_banner', '-loglevel', 'error']
+        if phrases:
+            cards=[s for s in subtitles if s['scene']==index]
+            listing=[]
+            for card_index,card in enumerate(cards):
+                name=f'card-{index}-{card_index}.png'
+                (landscape_frame if landscape else frame)(product,card['text'],index,directory/name,len(scenes),metadata.get('palette',0),metadata.get('angle','O que observar'))
+                listing.extend([f"file '{name}'",f"duration {card['end']-card['start']:.9f}"])
+            listing.append(f"file 'card-{index}-{len(cards)-1}.png'")
+            manifest=directory/f'cards-{index}.txt'
+            manifest.write_text('\n'.join(listing)+'\n',encoding='utf-8')
+            command += ['-f','concat','-safe','1','-i',str(manifest)]
+            # The poster matches the first visible phrase in this scene.
+            (directory/f'scene-{index}.png').write_bytes((directory/f'card-{index}-0.png').read_bytes())
+        else:
+            command += ['-loop', '1', '-framerate', '24', '-i', str(directory / f'scene-{index}.png')]
         if voices[index]:
             command += ['-i', str(directory / f'speech-{index}.wav')]
         else:
             command += ['-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono']
-        motion="zoompan=z='min(max(zoom,pzoom)+0.00012,1.025)':d=1:s="+dimensions+":fps=24,fade=t=in:d=0.18"
+        motion="fps=24,zoompan=z='min(max(zoom,pzoom)+0.00012,1.025)':d=1:s="+dimensions+":fps=24,fade=t=in:d=0.18"
         command += ['-t', f'{duration:.3f}', '-vf',motion,'-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '25', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-ar', '44100', '-ac', '1', '-af', 'apad', '-movflags', '+faststart', str(segment)]
         subprocess.run(command, check=True, timeout=180, capture_output=True, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         segments.append(segment)
@@ -174,14 +203,9 @@ def render(job, product):
     subprocess.run([exe, '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '1', '-i', str(concat), '-c', 'copy', '-movflags', '+faststart', str(temporary)], check=True, timeout=90, capture_output=True, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     temporary.replace(directory / 'video.mp4')
     (directory / 'legenda.txt').write_text(job['caption'], encoding='utf-8')
-    subtitles=creative.subtitle_segments(scenes,durations)
     (directory/'legendas.srt').write_text(creative.srt(subtitles),encoding='utf-8')
     (directory/'conteudo.json').write_text(json.dumps({**metadata,'scenes':scenes,'caption':job['caption'],'durations':durations,'voice':all(voices),
-        'subtitle_count':len(subtitles),'subtitle_timing':'estimated_by_text'},ensure_ascii=False,indent=2),encoding='utf-8')
+        'subtitle_count':len(subtitles),'subtitle_timing':'estimated_by_text','presentation_segments':subtitles if phrases else []},ensure_ascii=False,indent=2),encoding='utf-8')
     import quality
     quality.validate_media(job['id'])
-    for index in range(len(scenes)):
-        for name in (f'speech-{index}.json', f'speech-{index}.wav', f'clip-{index}.mp4'):
-            (directory / name).unlink(missing_ok=True)
-    concat.unlink(missing_ok=True)
     return all(voices), warnings[0] if warnings else ''

@@ -6,7 +6,7 @@ Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas,
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar para 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.5.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.6.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -36,7 +36,9 @@ Abra http://127.0.0.1:8765/#start. Mantenha o programa aberto e o notebook ligad
 
 Projetos OAuth externos com status **Testing** recebem refresh tokens que expiram em 7 dias para este escopo. Reconecte quando solicitado. Para operação contínua, configure o status do aplicativo no Google conforme as exigências aplicáveis; sair do modo de teste e verificações são gerenciados no Google Cloud. Documentação: [expiração de tokens](https://developers.google.com/identity/protocols/oauth2#expiration), [autorização para aplicativos desktop](https://developers.google.com/identity/protocols/oauth2/native-app), [envio de vídeos](https://developers.google.com/youtube/v3/docs/videos/insert).
 
-## Criação de conteúdo 0.5
+## Criação de conteúdo
+
+Na versão 0.6, **Texto na tela → Trechos curtos** passa a mostrar partes do roteiro durante a cena, dentro do próprio MP4. Não depende de ativar legendas no destino. Os trechos são equilibrados e preservam as palavras do roteiro; sua temporização é aproximada, distribuída pelo texto e pela duração da cena. **Cena completa** mantém a apresentação anterior. As opções valem para novos roteiros ou após recriar um roteiro local. Arquivos anteriores não são alterados automaticamente.
 
 Em **Modo automático → Criação de conteúdo**, escolha roteiro **Completo** (até quatro características) ou **Curto** (até duas por vídeo), formato e ritmo da voz. O modo curto alterna os detalhes entre variações. As aberturas consideram nome do produto, estilo e público da campanha; a criação procura uma alternativa quando a abertura já aparece no histórico daquele produto.
 
@@ -72,11 +74,21 @@ A geração exige dependências disponíveis e pelo menos 512 MB de espaço livr
 
 ## Aprendizado dos horários
 
+Em **Resultados**, a operação também consulta contagens públicas de vídeos que o sistema confirmou como publicados no YouTube. Com conta conectada e rotina ativa, cada vídeo pode ser atualizado a cada seis horas, em lotes de até 20 por consulta. Conferimos o canal e a visibilidade pública antes de aceitar visualizações, curtidas ou comentários. A tabela mostra a data da leitura; dados ausentes não viram zero, e uma falha preserva a última contagem com aviso. Essa leitura não altera cliques, comissões nem marca resultados de afiliado como informados.
+
+As métricas usam a mesma autorização Google e a [consulta oficial de vídeos](https://developers.google.com/youtube/data/reference/rest/v3/videos/list), sujeita à disponibilidade e cota da API. Contagens não comprovam atenção, cliques no link ou vendas. Leituras com falha aguardam pelo menos 15 minutos; a consulta não repete uploads. Desconectar o canal remove esse cache, e contagens automáticas com mais de 30 dias são descartadas quando o aplicativo volta a executar. A integração de métricas foi testada com respostas simuladas; ainda falta uma conta real autorizada nesta instalação.
+
 Em **Modo automático → Como escolher os horários**, escolha horários fixos ou aprendizado pelos cliques registrados. Na configuração inicial recomendada, o aprendizado está habilitado e começa usando 18h. A mudança considera apenas resultados explicitamente salvos em **Registrar publicação**, com pelo menos três registros em cada um de dois horários. Publicações automáticas ainda sem resultados ficam como **não informadas** e não contam como zero cliques. Um zero que você registrar é uma observação válida.
 
 Quando há base suficiente, a rotina prefere as horas com maior mediana de cliques, respeitando o limite diário e os horários já ocupados. Isso afeta os próximos agendamentos criados, sem mover publicações já agendadas. A comparação é um indício, não prova causal de que o horário produzirá mais vendas. Cliques e comissões continuam sendo informados por você. O intervalo por produto passa a contar da publicação real registrada, em vez da preparação antecipada do arquivo.
 
 ## Como a rotina funciona
+
+Antes de começar cada geração automática, a fila confere novamente a autorização, as pausas do produto e da campanha, a disponibilidade do catálogo e a ausência de tentativa externa. Um item retido não impede a geração de outro elegível. Se os dados mudaram, um roteiro automático sem edição manual é refeito antes de renderizar; um roteiro editado ou manual é preservado e pede recriação explícita.
+
+Ao reabrir o programa depois de uma interrupção, gerações automáticas locais podem ser retomadas quando a rotina e o produto estiverem autorizados. A primeira falha espera dois minutos; a segunda, dez; na terceira, o vídeo exige atenção. O contador não é zerado ao reiniciar. Vídeos manuais não são retomados automaticamente, e qualquer registro de tentativa externa impede essa recuperação. Em **Começar → Fila de produção**, confira retenções e próximas tentativas. Uma pausa não interrompe a codificação que já começou; impede novos inícios automáticos e envios locais posteriores, conforme as verificações do destino.
+
+Uma trava do sistema operacional limita o uso a uma instância por pasta de dados, inclusive em portas diferentes. O modo normal e o tester usam pastas distintas e podem ser abertos juntos. A trava é liberada quando o processo termina; não apague o arquivo studio.lock para tentar forçar outra instância.
 
 - Seleciona produtos autorizados. Primeiro experimenta os que ainda não têm resultados; depois usa comissões confirmadas informadas no histórico para ordenar os elegíveis. Alterna até quatro variações por produto, com sete dias de intervalo por padrão. Ao esgotar produtos ou versões, aguarda novos itens.
 - Extrai até quatro características do cadastro, cria abertura, cenas e encerramento, escreve legenda com o link preservado e publicidade identificada. Não produz demonstrações físicas do produto nem depoimentos de uso.

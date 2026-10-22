@@ -68,6 +68,10 @@ def init():
         ON jobs(product_id) WHERE status != 'published';
         CREATE TABLE IF NOT EXISTS content_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS content_meta (job_id TEXT PRIMARY KEY REFERENCES jobs(id), payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS render_state (
+            job_id TEXT PRIMARY KEY REFERENCES jobs(id), interrupted INTEGER NOT NULL DEFAULT 0,
+            started_at TEXT, block_code TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT ''
+        );
         ''')
         columns={r['name'] for r in c.execute('PRAGMA table_info(jobs)')}
         if 'results_recorded_at' not in columns:
@@ -77,7 +81,8 @@ def init():
             sources=(['SELECT job_id FROM youtube_jobs'] if has_youtube else [])+(["SELECT job_id FROM auto_jobs WHERE delivery='sent'"] if has_auto else [])
             recorded=" AND (clicks>0 OR revenue>0 OR id NOT IN ("+' UNION '.join(sources)+"))" if sources else ''
             c.execute("UPDATE jobs SET results_recorded_at=updated_at WHERE status='published'"+recorded)
-        c.execute("UPDATE jobs SET status='error', error='A geração foi interrompida. Tente gerar novamente.', updated_at=? WHERE status='rendering'", (stamp(),))
+        c.execute("INSERT INTO render_state(job_id,interrupted) SELECT id,1 FROM jobs WHERE status='rendering' ON CONFLICT(job_id) DO UPDATE SET interrupted=1")
+        c.execute("UPDATE jobs SET status='error', error='A geração foi interrompida. A rotina pode retomar trabalhos locais autorizados; vídeos manuais exigem sua retomada.', updated_at=? WHERE status='rendering'", (stamp(),))
     import campaigns,quality
     campaigns.init();quality.init()
 
@@ -339,7 +344,7 @@ def create_job(payload):
         jid = uuid4().hex
         timestamp = stamp()
         c.execute('INSERT INTO jobs (id,product_id,status,scenes,caption,due_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)', (jid, p['id'], 'draft', json.dumps(scenes, ensure_ascii=False), caption, next_slot(), timestamp, timestamp))
-    content_engine.save(jid,meta)
+        c.execute('INSERT INTO content_meta VALUES (?,?)',(jid,json.dumps(meta,ensure_ascii=False)))
     return jid
 
 

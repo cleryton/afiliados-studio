@@ -63,6 +63,16 @@ class HTTPTests(unittest.TestCase):
         self.assertFalse(autopilot.settings()['enabled'])
         self.assertFalse(youtube_client.settings()['enabled'])
 
+    def test_expired_session_is_identified_before_any_mutation(self):
+        with patch.object(content_engine,'configure') as configure:
+            status,_,body=self.request('/api/content/settings',{'mode':'rules'},{'X-Studio-Token':'old-session'})
+        self.assertEqual(status,403)
+        self.assertEqual(json.loads(body)['code'],'session_expired')
+        configure.assert_not_called()
+        status,_,body=self.request('/api/content/settings',{'mode':'rules'},{'X-Studio-Token':app.TOKEN,'Origin':'https://example.com'})
+        self.assertEqual(status,403)
+        self.assertNotIn('code',json.loads(body))
+
     def test_start_preserves_custom_routine_and_generator(self):
         original=autopilot.settings();content=content_engine.settings()
         try:

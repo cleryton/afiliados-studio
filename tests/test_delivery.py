@@ -89,6 +89,17 @@ class DeliveryTests(unittest.TestCase):
         with self.assertRaises(ValueError):catalog.configure({'enabled':True,'url':'https://example.com/catalog','authorized':False})
         self.assertFalse(app.readiness()['ready'])
 
+    def test_renumbered_catalog_item_reuses_link_without_stale_mapping_block(self):
+        catalog.ingest([self.item],True)
+        catalog.ingest([{**self.item,'id':'new-sku'}],True)
+        with core.db() as c:
+            pid=c.execute('SELECT id FROM products').fetchone()[0]
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM products').fetchone()[0],1)
+        self.assertTrue(catalog.eligible(pid))
+        self.assertEqual(len(autopilot.candidates(autopilot.settings(),core.now())),1)
+        catalog.ingest([{**self.item,'id':'new-sku','active':False}],True)
+        self.assertFalse(catalog.eligible(pid))
+
     def test_catalog_refresh_does_not_override_operator_pause_or_variant_limit(self):
         catalog.ingest([self.item],True)
         with core.db() as c:pid=c.execute('SELECT id FROM products').fetchone()[0]

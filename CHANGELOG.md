@@ -1,5 +1,18 @@
 # Alterações
 
+## 0.6.0-beta — 22/10/2026
+
+- Texto por trechos dentro do próprio MP4, com cartões equilibrados para evitar uma última palavra isolada; alternativa de cena completa mantida.
+- Aberturas mais compactas, com nome do produto e público contextualizados sem acrescentar benefícios não cadastrados.
+- Fila com conferência de autorização, pausa, disponibilidade da fonte e tentativas externas antes de iniciar a renderização.
+- Atualizações do produto ou campanha refazem roteiros automáticos antes de renderizar; edições manuais desatualizadas são preservadas e exigem recriação explícita.
+- Retomada automática de gerações locais interrompidas, com espera de 2 e 10 minutos e parada após três falhas. Envios externos não são repetidos.
+- Bloqueio por pasta de dados impede duas instâncias de usarem o mesmo banco; buffers temporários de renderização são limpos mesmo após falhas.
+- Fila visível em Começar e acompanhar, com motivo de retenção e tentativa programada. Rascunhos do Buffer também respeitam pausas antes do compartilhamento.
+- Renovação da sessão local após reinício só repete uma solicitação explicitamente recusada antes da execução; falhas de rede e envios incertos não são repetidos.
+- Catálogos que renumeram um item com o mesmo link não deixam o produto bloqueado por um registro antigo.
+- Consulta automática de visualizações, curtidas e comentários públicos do YouTube, em lotes limitados e a cada seis horas por vídeo. Falhas têm espera, snapshots expiram e resultados de afiliado não são inferidos nem alterados.
+
 ## 0.5.0-beta — 22/10/2026
 
 - Aberturas por produto, estilo e público, com alternativas para reduzir repetição no histórico.

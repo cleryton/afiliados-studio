@@ -41,16 +41,15 @@ def worker():
                     autopilot.cycle()
                 except Exception as exc:
                     autopilot.event('attention',str(exc))
-            with core.db() as c:
-                c.execute("UPDATE jobs SET status='queued', updated_at=? WHERE status='scheduled' AND due_at<=?", (core.stamp(), core.stamp()))
-                auto_enabled=autopilot.settings()['enabled']
-                row = c.execute("SELECT jobs.* FROM jobs LEFT JOIN auto_jobs ON auto_jobs.job_id=jobs.id WHERE jobs.status='queued' AND (? OR auto_jobs.job_id IS NULL) AND (auto_jobs.retry_at IS NULL OR auto_jobs.retry_at<=?) ORDER BY jobs.created_at LIMIT 1",(int(auto_enabled),core.stamp())).fetchone()
-                if row:
-                    job = dict(row)
-                    c.execute("UPDATE jobs SET status='rendering', updated_at=? WHERE id=?", (core.stamp(), job['id']))
-                    product = dict(c.execute('SELECT * FROM products WHERE id=?', (job['product_id'],)).fetchone())
-            if row:
+            import production
+            claimed=production.claim_next()
+            if claimed:
+                job,product=claimed
                 try:
+                    prepared=production.prepare(job,product)
+                    if not prepared:
+                        STOP.wait(2);continue
+                    job,product=prepared
                     from renderer import render
                     voiced, warning = render(job, product)
                     with core.db() as c:
@@ -213,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin and origin not in expected_origins:
             return self.reject_post(403, 'Origem não autorizada.')
         if not secrets.compare_digest(self.headers.get('X-Studio-Token', ''), TOKEN):
-            return self.reject_post(403, 'Atualize a página para continuar.')
+            return self.reject_post(403, 'Atualize a página para continuar.', 'session_expired')
         try:
             length = int(self.headers.get('Content-Length', 0))
             if length <= 0 or length > MAX_BODY:
@@ -347,7 +346,7 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(500, {'error': 'A operação falhou. Confira o terminal e tente novamente.'})
 
 
-    def reject_post(self,status,message):
+    def reject_post(self,status,message,code=None):
         # Drain bounded request bodies before closing to avoid Windows TCP resets
         # hiding the error response from the browser. Never parse rejected data.
         previous=self.connection.gettimeout()
@@ -358,7 +357,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.rfile.read(length)
         except (ValueError,OSError):pass
         finally:self.connection.settimeout(previous)
-        return self.respond(status,{'error':message})
+        return self.respond(status,{'error':message,**({'code':code} if code else {})})
 
 
 def main():
@@ -377,6 +376,16 @@ def main():
     except ImportError:
         print('Instale as dependências gratuitas: python -m pip install -r requirements.txt')
         raise SystemExit(1)
+    from instance_lock import InstanceLock
+    try:
+        with InstanceLock(core.DATA):
+            serve(args)
+    except ValueError as error:
+        print(str(error),flush=True)
+        raise SystemExit(1) from None
+
+
+def serve(args):
     core.init()
     autopilot.init()
     catalog.init()
