@@ -71,10 +71,43 @@ class DeliveryTests(unittest.TestCase):
         self.assertFalse(catalog.eligible(pid))
         self.assertEqual(autopilot.candidates(autopilot.settings(),core.now()),[])
 
+    def test_catalog_reuses_manual_link_and_refreshes_source_before_generation(self):
+        pid=core.save_product({'name':'Descrição antiga','url':self.item['affiliate_url'],'kind':'physical','category':'Casa','description':'Características antigas.'})
+        result=catalog.ingest([self.item],True)
+        self.assertEqual(result['added'],0)
+        with core.db() as c:
+            product=dict(c.execute('SELECT * FROM products WHERE id=?',(pid,)).fetchone())
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM products').fetchone()[0],1)
+        self.assertEqual(product['description'],self.item['description'])
+        autopilot.configure({'enabled':True,'hours':[18]})
+        jid=autopilot.cycle()
+        self.assertEqual(core.get_job(jid)['product_id'],pid)
+        self.assertIn('Material em madeira.',json.loads(core.get_job(jid)['scenes']))
+
     def test_catalog_requires_authorization_and_real_links(self):
         with self.assertRaises(ValueError):catalog.ingest([self.item])
         with self.assertRaises(ValueError):catalog.configure({'enabled':True,'url':'https://example.com/catalog','authorized':False})
         self.assertFalse(app.readiness()['ready'])
+
+    def test_catalog_refresh_does_not_override_operator_pause_or_variant_limit(self):
+        catalog.ingest([self.item],True)
+        with core.db() as c:pid=c.execute('SELECT id FROM products').fetchone()[0]
+        autopilot.approve_product(pid,{'active':False,'approved':True,'max_variants':2})
+        catalog.ingest([],True)
+        catalog.ingest([self.item],True)
+        with core.db() as c:rule=dict(c.execute('SELECT * FROM auto_products WHERE product_id=?',(pid,)).fetchone())
+        self.assertEqual(rule['active'],0);self.assertEqual(rule['max_variants'],2)
+        self.assertTrue(catalog.eligible(pid))
+        self.assertEqual(autopilot.candidates(autopilot.settings(),core.now()),[])
+
+    def test_source_pause_blocks_selection_then_resumes_without_changing_operator_choice(self):
+        catalog.ingest([{**self.item,'active':False}],True)
+        with core.db() as c:pid=c.execute('SELECT id FROM products').fetchone()[0]
+        self.assertFalse(catalog.eligible(pid))
+        self.assertEqual(autopilot.candidates(autopilot.settings(),core.now()),[])
+        catalog.ingest([self.item],True)
+        self.assertTrue(catalog.eligible(pid))
+        self.assertEqual(len(autopilot.candidates(autopilot.settings(),core.now())),1)
 
     def test_credentials_encrypted_and_missing_channel_clear(self):
         document={'installed':{'client_id':'test.apps.googleusercontent.com','client_secret':'secret-fixture'}}

@@ -1,5 +1,19 @@
 # Alterações
 
+## 0.5.0-beta — 22/10/2026
+
+- Aberturas por produto, estilo e público, com alternativas para reduzir repetição no histórico.
+- Roteiro completo ou curto; o modo curto alterna até duas características verificadas por variação.
+- Narração natural ou ágil e previsão de duração, atualizada após editar o roteiro.
+- Composição de vídeo com capítulos visuais, foto em painel de contraste e publicidade nos dois formatos.
+- Legendas SRT em trechos de até duas linhas, com tempos aproximados distribuídos pelo texto.
+- Hashtags derivadas do tipo e da categoria do produto; características e link de afiliado preservados.
+- Leitura de um produto identificado em JSON-LD, com características explícitas e alternativa por metadados HTML; listas ambíguas não misturam produtos.
+- Catálogo autorizado atualiza os dados também ao reutilizar um produto cadastrado manualmente com o mesmo link.
+- Atualizações do catálogo preservam pausa, autorização e limite de variações definidos pelo usuário; disponibilidade da fonte continua bloqueando itens removidos, inativos ou desatualizados.
+- Pillow atualizado para 13.0.0 após a auditoria identificar vulnerabilidades na versão anterior.
+- Python mínimo passa a 3.11, conforme o requisito do Pillow corrigido; instalador orienta a recriação de ambientes antigos, e CI verifica Python 3.11, 3.12 e 3.13.
+
 ## Repositório e validadores — 19/10/2026
 
 - Repositório público após varredura do histórico e dos pacotes publicados.

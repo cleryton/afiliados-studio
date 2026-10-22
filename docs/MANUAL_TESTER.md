@@ -1,12 +1,12 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.4.0-beta · atualizado em 18/10/2026.
+Versão 0.5.0-beta · atualizado em 18/10/2026.
 
 Este roteiro permite testar instalação, roteiro, vídeo, narração, legendas e recuperação de falhas. O primeiro teste não exige conta de afiliado, Google, Buffer nem assinatura de IA.
 
 ## 1. O que preparar
 
-- Notebook com Windows e Python 3.10 ou superior; a instalação foi verificada com Python 3.12.
+- Notebook com Windows e Python 3.11 ou superior; a instalação foi verificada com Python 3.12. Execute instalar.bat novamente ao atualizar esta versão.
 - Internet para instalar as duas dependências gratuitas. Depois, a demonstração local funciona sem conta externa.
 - Pelo menos 512 MB livres para gerar os clipes. Separe espaço adicional se testar muitos vídeos.
 - Uma pasta própria para o projeto. Extraia o ZIP antes de executar os arquivos.
@@ -152,3 +152,18 @@ A integração de postagem foi testada com respostas simuladas; o primeiro uploa
 | T16 | Verificar MP4 de versão anterior | Decodificação e conferência do arquivo ou erro com instrução de recuperação. |
 
 O botão **Recriar roteiro** exige nova geração do vídeo e não serve para substituir arquivos já enviados ao YouTube. Pausar uma campanha não garante cancelar agendamentos no destino; essa conferência deve ser feita no YouTube Studio em uma validação real.
+
+## 11. Testar a criação de conteúdo 0.5
+
+Em **Modo automático → Criação de conteúdo**, selecione roteiro curto e voz ágil, salve e recrie um roteiro local de teste. Confira até duas características, público e estilo da campanha, link preservado e estimativa de duração. Depois de autorizar os materiais, gere e reproduza o MP4.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T17 | Usar roteiro curto com quatro características cadastradas | Até duas características por vídeo; variações podem usar as demais, sem inventar detalhes. |
+| T18 | Recriar um roteiro de um produto já usado | Usa uma abertura alternativa quando ainda houver uma disponível para o contexto. |
+| T19 | Gerar nos dois formatos | Capítulos visuais e identificação de publicidade legíveis; foto opcional preservada. |
+| T20 | Baixar o SRT | Trechos de até duas linhas com tempos crescentes; temporização aproximada, não sincronização exata por palavra. |
+| T21 | Editar uma cena | Estimativa de leitura atualizada e aprovação anterior invalidada. |
+| T22 | Ler uma página pública com um único produto em JSON-LD | Nome e características explícitas sugeridos, com origem informada; revise antes de salvar. Página bloqueada ou sem dados permite preenchimento manual, preservando seu link. |
+
+Sem uma voz pt-BR instalada, o vídeo continua com texto e o aviso de ausência de narração. A mudança de ritmo só afeta a voz quando ela está disponível. O modo tester mantém todo envio externo bloqueado.

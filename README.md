@@ -4,7 +4,9 @@
 
 Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas, e integra o envio e agendamento ao YouTube pela API oficial. Sem assinatura de IA ou hospedagem. Energia e internet continuam sendo custos da operação.
 
-**Situação atual:** versão 0.4.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar para 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
+
+**Situação atual:** versão 0.5.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -33,6 +35,20 @@ Abra http://127.0.0.1:8765/#start. Mantenha o programa aberto e o notebook ligad
 6. Clique **Iniciar criação e publicação automática**. A publicação será pública no canal conectado. No primeiro início, a rotina começa em até um minuto: prepara um vídeo por dia às 18h de Brasília, com antecedência de até três vídeos. Ao retomar, mantém seus ajustes de ritmo e geração. O horário é um ponto inicial de teste, sem evidência de que seja o melhor para seu público. Ajustes ficam em **Modo automático**.
 
 Projetos OAuth externos com status **Testing** recebem refresh tokens que expiram em 7 dias para este escopo. Reconecte quando solicitado. Para operação contínua, configure o status do aplicativo no Google conforme as exigências aplicáveis; sair do modo de teste e verificações são gerenciados no Google Cloud. Documentação: [expiração de tokens](https://developers.google.com/identity/protocols/oauth2#expiration), [autorização para aplicativos desktop](https://developers.google.com/identity/protocols/oauth2/native-app), [envio de vídeos](https://developers.google.com/youtube/v3/docs/videos/insert).
+
+## Criação de conteúdo 0.5
+
+Em **Modo automático → Criação de conteúdo**, escolha roteiro **Completo** (até quatro características) ou **Curto** (até duas por vídeo), formato e ritmo da voz. O modo curto alterna os detalhes entre variações. As aberturas consideram nome do produto, estilo e público da campanha; a criação procura uma alternativa quando a abertura já aparece no histórico daquele produto.
+
+Os dados continuam vindo do cadastro: informe características específicas e confirmadas, como material, medidas, compatibilidade ou conteúdo incluído. O gerador não acrescenta experiência de uso, resultados, descontos ou benefícios que não tenham sido informados. A leitura do link depende do que a página pública oferece; revise os dados sugeridos.
+
+Na leitura do link, o sistema tenta identificar um único [produto em JSON-LD](https://schema.org/Product) e aproveitar descrição, material, cor, tamanho, modelo e características adicionais explícitas. Sem esse formato, usa título e descrição HTML. Listas ambíguas não combinam características de produtos diferentes. Não executa scripts da loja, não baixa fotos automaticamente e não infere comissão ou aprovação da afiliação. O link original é mantido.
+
+Cada vídeo tem capítulos visuais, identificação de publicidade e encerramento. Uma foto autorizada aparece em um painel com contraste; sem foto, usa tipografia e numeração de cenas. Hashtags seguem o tipo e a categoria cadastrados. A estimativa de tempo no editor é uma previsão de leitura, não um limite garantido; a duração real é medida na verificação do MP4.
+
+A narração usa a voz pt-BR instalada no Windows, em ritmo natural ou ágil. O SRT divide o texto em trechos de até duas linhas, com temporização aproximada calculada a partir do texto e da duração das cenas; não é alinhamento exato palavra por palavra. A legenda do post mantém o link e a identificação de publicidade.
+
+As configurações valem para novos roteiros. Para aplicá-las a um vídeo local existente, use **Recriar roteiro com a campanha atual**, revise e gere o MP4 novamente. Isso substitui a edição local anterior e invalida a aprovação. Vídeos com tentativa de envio externo permanecem protegidos contra substituição local.
 
 ## Campanhas e revisão editorial
 
@@ -101,6 +117,8 @@ Formato da fonte (até 100 itens e 1 MB):
 `kind` aceita `physical` ou `digital`. Preço e comissão são opcionais e informados pela fonte; não comprovam ganhos. Use um `id` estável por produto. O documento representa a lista completa atual, não apenas novos itens. Todos os itens são validados antes de alterar o banco. Exemplos não são importados para a operação real.
 
 Produtos da fonte são retidos quando a última leitura tem mais de 24 horas. Pausas retêm o envio. Mudanças no link ou descrição antes do primeiro upload refazem o conteúdo e a renderização automaticamente. Se já houver envio remoto, a publicação é retida e vídeos agendados pelo sistema podem voltar a privado. Confira o painel em caso de alteração no catálogo. Com o programa fechado ou sem acesso à internet, não é possível cancelar agendamentos remotos. Produtos manuais dependem da sua manutenção.
+
+Atualizar o catálogo preserva sua pausa, autorização e limite de variações de cada produto. A disponibilidade na fonte é conferida separadamente: um item removido, inativo ou desatualizado permanece retido mesmo se estiver autorizado na rotina. Produtos que versões anteriores já deixaram pausados precisam ser reativados no painel quando você quiser retomá-los.
 
 ## Pausar e acompanhar
 

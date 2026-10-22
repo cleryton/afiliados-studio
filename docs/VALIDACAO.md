@@ -4,7 +4,7 @@ O workflow **Validadores** executa em cada push e pull request e também pode se
 
 | Verificação | O que confere |
 | --- | --- |
-| Testes Windows | Comportamento do aplicativo e proteções em Python 3.10, 3.11 e 3.12. |
+| Testes Windows | Comportamento do aplicativo e proteções em Python 3.11, 3.12 e 3.13. |
 | Fontes | Sintaxe de todos os arquivos Python e JSON rastreados. |
 | JavaScript | Sintaxe de todos os arquivos JavaScript rastreados, usando Node.js 24. |
 | Recursos do painel | Arquivos locais referenciados no HTML; rejeita scripts e eventos inline. |

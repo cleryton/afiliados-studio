@@ -6,6 +6,7 @@ import wave
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import core
+import creative
 
 W, H = 720, 1280
 
@@ -43,40 +44,47 @@ def wrap(draw, value, face, width):
     return lines
 
 
-def text_block(draw, value, top, max_height, color='#f6f7f8', maximum=52):
+def text_block(draw, value, top, max_height, color='#f6f7f8', maximum=52, width=570, left=70):
     for size in range(maximum, 19, -2):
         face = font(size, True)
-        lines = wrap(draw, value, face, 570)
+        lines = wrap(draw, value, face, width)
         line_height = size + 13
         if len(lines) * line_height <= max_height:
             break
     if len(lines) * line_height > max_height:
         raise ValueError('Uma cena contém texto demais. Reduza o roteiro para caber no vídeo.')
     for index, line in enumerate(lines):
-        draw.text((70, top + index * line_height), line, font=face, fill=color)
+        draw.text((left, top + index * line_height), line, font=face, fill=color)
 
 
-def frame(product, text, index, destination, total=4, palette=0):
+def frame(product, text, index, destination, total=4, palette=0, angle='O que observar'):
     themes=[('#121d22','#1c2d34','#a7dfc6','#36564d'),('#282019','#3a2d24','#f2d3a2','#66533b'),('#142330','#203448','#b5dcef','#34566d')]
     background,panel,accent,shape=themes[palette%len(themes)]
     canvas = Image.new('RGB', (W, H), background)
     draw = ImageDraw.Draw(canvas)
     draw.rounded_rectangle((46, 76, 674, 1140), radius=35, fill=panel)
-    heading='ANTES DE ESCOLHER' if index==0 else ('O PRODUTO' if index==1 else ('SAIBA MAIS' if index==total-1 else f'DETALHE {index-1:02d}'))
-    draw.text((72, 110),heading, font=font(22, True), fill=accent)
+    heading=creative.role(index,total,angle)
+    draw.text((72, 110),heading, font=font(21, True), fill=accent)
     draw.text((575,110),f'{index+1:02d}/{total:02d}',font=font(19),fill=accent)
+    draw.text((72,151),'PUBLICIDADE · DETALHES DO PRODUTO',font=font(15),fill=accent)
     image_path = core.DATA / 'media' / product['image'] if product['image'] else None
     if image_path and image_path.exists():
         with Image.open(image_path) as original:
-            image = ImageOps.contain(original.convert('RGB'), (570, 470))
-            canvas.paste(image, ((W - image.width) // 2, 180 + (470 - image.height) // 2))
-        top, height = 695, 350
+            image = ImageOps.contain(original.convert('RGB'), (536, 390))
+            draw.rounded_rectangle((72,197,648,635),radius=22,fill='#f4f5f0')
+            canvas.paste(image, ((W - image.width) // 2, 215 + (390 - image.height) // 2))
+        top, height = 672, 325
     else:
-        draw.ellipse((480, 195, 630, 345), fill=shape)
-        draw.rounded_rectangle((80, 250, 180, 350), radius=24, fill=accent)
-        draw.text((107, 260), '↗', font=font(54), fill='#182a26')
-        top, height = 440, 590
+        draw.text((72,220),f'{index+1:02d}',font=font(110,True),fill=shape)
+        draw.rounded_rectangle((540,242,622,324),radius=20,fill=accent)
+        draw.text((562,249),'↗',font=font(44),fill=background)
+        top, height = 385, 610
     text_block(draw, text, top, height, maximum=56 if len(text) < 100 else 40)
+    if index==total-1:
+        draw.rounded_rectangle((72,1023,648,1073),radius=12,fill=accent)
+        draw.text((96,1037),'CONFIRA AS CONDIÇÕES NA LEGENDA',font=font(19,True),fill=background)
+    else:
+        draw.text((72,1047),'Um detalhe por vez. Confira a ficha completa.',font=font(17),fill=accent)
     bar_width=576/total
     for step in range(total):
         draw.rounded_rectangle((72 + step * bar_width,1094,72+(step+1)*bar_width-13,1099),radius=2,fill=accent if step<=index else shape)
@@ -84,23 +92,29 @@ def frame(product, text, index, destination, total=4, palette=0):
     canvas.save(destination)
 
 
-def landscape_frame(product,text,index,destination,total=4,palette=0):
+def landscape_frame(product,text,index,destination,total=4,palette=0,angle='O que observar'):
     themes=[('#121d22','#1c2d34','#a7dfc6'),('#282019','#3a2d24','#f2d3a2'),('#142330','#203448','#b5dcef')]
     background,panel,accent=themes[palette%3]
     canvas=Image.new('RGB',(1280,720),background);draw=ImageDraw.Draw(canvas)
     draw.rounded_rectangle((35,35,1245,685),radius=28,fill=panel)
-    draw.text((70,65),'PUBLICIDADE · CONHEÇA O PRODUTO',font=font(19,True),fill=accent)
+    draw.text((70,62),'PUBLICIDADE · DETALHES DO PRODUTO',font=font(16),fill=accent)
+    draw.text((70,108),creative.role(index,total,angle),font=font(22,True),fill=accent)
     draw.text((1110,65),f'{index+1:02d}/{total:02d}',font=font(20),fill=accent)
-    text_block(draw,text,180,380,maximum=48)
+    text_block(draw,text,186,370,maximum=49 if len(text)<130 else 42,width=600)
     image_path=core.DATA/'media'/product['image'] if product['image'] else None
     if image_path and image_path.is_file():
         with Image.open(image_path) as original:
-            picture=ImageOps.contain(original.convert('RGB'),(465,420))
-            canvas.paste(picture,(735+(465-picture.width)//2,155+(420-picture.height)//2))
+            picture=ImageOps.contain(original.convert('RGB'),(420,390))
+            draw.rounded_rectangle((750,147,1205,587),radius=24,fill='#f4f5f0')
+            canvas.paste(picture,(768+(420-picture.width)//2,172+(390-picture.height)//2))
     else:
-        draw.rounded_rectangle((770,205,1160,490),radius=30,fill=background)
-        draw.text((898,260),'↗',font=font(100),fill=accent)
-        draw.text((805,510),'DETALHES NA DESCRIÇÃO',font=font(20,True),fill=accent)
+        draw.rounded_rectangle((750,147,1205,587),radius=24,fill=background)
+        draw.text((790,200),f'{index+1:02d}',font=font(130,True),fill=accent)
+        draw.text((795,381),creative.role(index,total),font=font(17,True),fill=accent)
+        text_block(draw,creative.shorten(product['name'],72),430,120,maximum=26,width=350,left=795)
+    if index==total-1:
+        draw.rounded_rectangle((70,578,670,612),radius=8,fill=accent)
+        draw.text((88,585),'CONFIRA AS CONDIÇÕES NA DESCRIÇÃO',font=font(17,True),fill=background)
     for step in range(total):
         left=70+step*1140/total
         draw.rounded_rectangle((left,635,left+1140/total-10,640),radius=2,fill=accent if step<=index else background)
@@ -122,10 +136,10 @@ def render(job, product):
     warnings = []
     for index, scene in enumerate(scenes):
         image_path = directory / f'scene-{index}.png'
-        (landscape_frame if landscape else frame)(product, scene, index, image_path,len(scenes),metadata.get('palette',0))
+        (landscape_frame if landscape else frame)(product, scene, index, image_path,len(scenes),metadata.get('palette',0),metadata.get('angle','O que observar'))
         speech_input = directory / f'speech-{index}.json'
         speech_output = directory / f'speech-{index}.wav'
-        speech_input.write_text(json.dumps({'text': scene}, ensure_ascii=False), encoding='utf-8')
+        speech_input.write_text(json.dumps({'text': scene,'rate':1 if metadata.get('pace')=='agil' else 0}, ensure_ascii=False), encoding='utf-8')
         voiced = False
         try:
             subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-File', str(core.ROOT / 'speech.ps1'), str(speech_input), str(speech_output)], capture_output=True, check=True, timeout=60, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
@@ -160,14 +174,10 @@ def render(job, product):
     subprocess.run([exe, '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '1', '-i', str(concat), '-c', 'copy', '-movflags', '+faststart', str(temporary)], check=True, timeout=90, capture_output=True, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     temporary.replace(directory / 'video.mp4')
     (directory / 'legenda.txt').write_text(job['caption'], encoding='utf-8')
-    def timestamp(seconds):
-        value=round(seconds*1000);hours,remaining=divmod(value,3600000);minutes,remaining=divmod(remaining,60000);seconds,milliseconds=divmod(remaining,1000)
-        return f'{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}'
-    subtitles=[];elapsed=0
-    for index,(scene,duration) in enumerate(zip(scenes,durations)):
-        subtitles.append(f'{index+1}\n{timestamp(elapsed)} --> {timestamp(elapsed+duration)}\n{scene}\n');elapsed+=duration
-    (directory/'legendas.srt').write_text('\n'.join(subtitles),encoding='utf-8')
-    (directory/'conteudo.json').write_text(json.dumps({**metadata,'scenes':scenes,'caption':job['caption'],'durations':durations,'voice':all(voices)},ensure_ascii=False,indent=2),encoding='utf-8')
+    subtitles=creative.subtitle_segments(scenes,durations)
+    (directory/'legendas.srt').write_text(creative.srt(subtitles),encoding='utf-8')
+    (directory/'conteudo.json').write_text(json.dumps({**metadata,'scenes':scenes,'caption':job['caption'],'durations':durations,'voice':all(voices),
+        'subtitle_count':len(subtitles),'subtitle_timing':'estimated_by_text'},ensure_ascii=False,indent=2),encoding='utf-8')
     import quality
     quality.validate_media(job['id'])
     for index in range(len(scenes)):

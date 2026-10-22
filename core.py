@@ -149,9 +149,13 @@ class MetadataParser(HTMLParser):
         self.meta = {}
         self.in_title = False
         self.title = ''
+        self.json_blocks = []
+        self.json_buffer = None
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        if tag == 'script' and attrs.get('type', '').split(';')[0].strip().lower() == 'application/ld+json':
+            self.json_buffer = '' if len(self.json_blocks) < 20 else None
         if tag == 'title':
             self.in_title = True
         if tag == 'meta':
@@ -161,10 +165,15 @@ class MetadataParser(HTMLParser):
     def handle_endtag(self, tag):
         if tag == 'title':
             self.in_title = False
+        if tag == 'script' and self.json_buffer is not None:
+            self.json_blocks.append(self.json_buffer)
+            self.json_buffer = None
 
     def handle_data(self, value):
         if self.in_title:
             self.title += value
+        if self.json_buffer is not None:
+            self.json_buffer = (self.json_buffer + value)[:64_000]
 
 
 class PublicRedirect(HTTPRedirectHandler):
@@ -228,11 +237,15 @@ def import_product(url):
         raise ValueError('O site bloqueou ou não respondeu à leitura. Seu link foi mantido; preencha os dados manualmente.') from exc
     parser = MetadataParser()
     parser.feed(content)
-    title = html.unescape(parser.meta.get('og:title') or parser.title).strip()[:140]
-    description = html.unescape(parser.meta.get('og:description') or parser.meta.get('description', '')).strip()[:650]
+    import product_source
+    structured = product_source.single_product(parser.json_blocks)
+    title = structured.get('name') or product_source.text(html.unescape(parser.meta.get('og:title') or parser.title))[:140]
+    description = structured.get('description') or product_source.text(html.unescape(parser.meta.get('og:description') or parser.meta.get('description', '')))[:650]
     if not title or any(t in title.lower() for t in ('captcha', 'robot check', 'access denied', 'just a moment')):
         raise ValueError('Não foi possível identificar o produto. Preencha os dados manualmente.')
-    return {'name': title, 'description': description, 'platform': platform_for(url), 'notice': 'Dados públicos sugeridos. Confira o nome e a descrição antes de salvar. Preço e comissão precisam ser informados por você.'}
+    source = 'schema.org/Product' if structured else 'metadados HTML'
+    return {'name': title, 'description': description, 'platform': platform_for(url), 'source': source,
+            'notice': f'Dados públicos sugeridos de {source}. Confira as características antes de salvar. Preço, comissão e autorização dos materiais precisam ser confirmados por você.'}
 
 
 def save_product(payload):
@@ -384,7 +397,9 @@ def edit_job(jid, payload):
         if json.loads(old['scenes'])!=scenes or old['caption']!=caption:
             meta_row=c.execute('SELECT payload FROM content_meta WHERE job_id=?',(jid,)).fetchone()
             if meta_row:
+                import creative
                 meta=json.loads(meta_row['payload']);meta['edited']=True;meta['note']='Conteúdo editado por você após a criação inicial.'
+                meta['scene_count']=len(scenes);meta['reading']=creative.reading(scenes,meta.get('pace','normal'))
                 c.execute('UPDATE content_meta SET payload=? WHERE job_id=?',(json.dumps(meta,ensure_ascii=False),jid))
     return status
 

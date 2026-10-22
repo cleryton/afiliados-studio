@@ -12,9 +12,10 @@ import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import core
+import creative
 
 LOCAL_URL = 'http://127.0.0.1:11434'
-DEFAULTS = {'mode':'auto','model':'','format':'landscape'}
+DEFAULTS = {'mode':'auto','model':'','format':'landscape','length':'complete','pace':'normal'}
 _cache = {'at':0,'available':False,'models':[]}
 _lock = threading.Lock()
 ANGLES = ['O que observar', 'Detalhes em foco', 'Antes de escolher', 'Conheça as características']
@@ -59,12 +60,15 @@ def configure(payload):
     model=core.clean(payload.get('model',''),120)
     video_format=payload.get('format',settings()['format'])
     if video_format not in ('landscape','portrait'):raise ValueError('Formato de vídeo inválido.')
+    previous=settings()
+    length=payload.get('length',previous['length']);pace=payload.get('pace',previous['pace'])
+    if length not in ('complete','short') or pace not in ('normal','agil'):raise ValueError('Escolha uma extensão de roteiro e um ritmo de narração válidos.')
     if 'cloud' in model.lower():
         raise ValueError('Escolha um modelo local. Modelos de nuvem não fazem parte do modo gratuito.')
     if mode=='ollama' and model not in {m['name'] for m in availability(force=True)['models']}:
         raise ValueError('Abra o Ollama com um modelo local disponível antes de selecionar esse modo.')
     with core.db() as c:
-        for key,value in {'mode':mode,'model':model,'format':video_format}.items():
+        for key,value in {'mode':mode,'model':model,'format':video_format,'length':length,'pace':pace}.items():
             c.execute('INSERT INTO content_settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,json.dumps(value)))
 
 
@@ -126,17 +130,19 @@ def generate(product,variant=0,config=None):
     campaign=campaigns.for_product(product.get('id'))
     config=config or settings()
     facts=facts_from(product.get('description',''))
+    source_count=len(facts)
+    if config.get('length')=='short' and len(facts)>2:
+        start=(variant*2)%len(facts)
+        facts=(facts[start:]+facts[:start])[:2]
     if not facts:
         facts=['Confira as características e condições na página do produto antes de escolher.']
     order=list(range(len(facts)))
     if variant%2:order.reverse()
-    hook=HOOKS[variant%len(HOOKS)];angle=ANGLES[variant%len(ANGLES)]
-    if campaign:
-        hook={'direto':'Quais características você procura neste produto?',
-              'educativo':'O que conferir antes de escolher este produto?',
-              'comparativo':'Quais detalhes comparar antes da sua escolha?'}[campaign['tone']]
-        if campaign['audience']:
-            hook='Você busca opções para '+campaign['audience'].rstrip('.?!')+'?'
+    hook=creative.opening(product,campaign,variant);angle=ANGLES[variant%len(ANGLES)]
+    previous_hooks=set()
+    if product.get('id'):
+        with core.db() as c:
+            previous_hooks={json.loads(row['scenes'])[0] for row in c.execute('SELECT scenes FROM jobs WHERE product_id=?',(product['id'],))}
     engine='rules';model='';note='Conteúdo organizado localmente a partir das características cadastradas.'
     if config['mode']!='rules':
         status=availability()
@@ -150,6 +156,12 @@ def generate(product,variant=0,config=None):
                 note='A IA local não respondeu ou o plano não passou na validação. Usado gerador local de características.'
         else:
             note='Ollama ou modelo local indisponível. Usado gerador local de características, sem serviços pagos.'
+    if hook in previous_hooks:
+        for offset in range(1,5):
+            alternative=creative.opening(product,campaign,variant+offset)
+            if alternative not in previous_hooks:
+                hook=alternative;note+=' Abertura variada para não repetir o histórico deste produto.'
+                break
     chosen=[facts[index] for index in order]
     cta=CTAS[variant%len(CTAS)]
     if campaign:
@@ -158,14 +170,15 @@ def generate(product,variant=0,config=None):
              'conhecer':'Conheça a descrição completa na página do produto. O link está na descrição.'}[campaign['cta']]
     scenes=[hook,'Conheça: '+product['name'],*chosen,cta]
     caption=hook+'\n\n'+product['name']+'\n\n'+'\n'.join('• '+f for f in chosen)
-    caption+='\n\nPublicidade · Posso receber comissão por compras elegíveis.\n\n#produtos #achadinhos #publicidade'
+    caption+='\n\nPublicidade · Posso receber comissão por compras elegíveis.\n\n'+creative.hashtags(product)
     link='\n\nLink do produto: '+product['url']
     if len(caption+link)>2200:
         caption=hook+'\n\n'+product['name']+'\n\nPublicidade · Posso receber comissão por compras elegíveis.'
     caption+=link
     if len(caption)>2200:raise ValueError('Use um link oficial de afiliado mais curto para caber na legenda.')
     meta={'engine':engine,'model':model,'note':note,'angle':angle,'facts':chosen,'source_hash':hashlib.sha256(product.get('description','').encode()).hexdigest(),
-          'scene_count':len(scenes),'generated_at':core.stamp(),'palette':variant%3,'format':config.get('format',settings()['format']),'campaign':campaign,'product_hash':product_fingerprint(product)}
+          'scene_count':len(scenes),'generated_at':core.stamp(),'palette':variant%3,'format':config.get('format',settings()['format']),'campaign':campaign,'product_hash':product_fingerprint(product),
+          'creative_version':2,'length':config.get('length','complete'),'pace':config.get('pace','normal'),'source_fact_count':source_count,'reading':creative.reading(scenes,config.get('pace','normal'))}
     return scenes,caption,meta
 
 

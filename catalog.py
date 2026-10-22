@@ -82,9 +82,7 @@ def ingest(document,authorized=False):
     added=0;updated=0;now=core.stamp()
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
-        previous=[r['product_id'] for r in c.execute('SELECT product_id FROM catalog_items WHERE active=1')]
         c.execute('UPDATE catalog_items SET active=0')
-        for pid in previous:c.execute('UPDATE auto_products SET active=0 WHERE product_id=?',(pid,))
         for row in rows:
             existing=c.execute('SELECT product_id FROM catalog_items WHERE source_id=?',(row['source_id'],)).fetchone()
             if existing:
@@ -93,12 +91,16 @@ def ingest(document,authorized=False):
             else:
                 # Reuse an identical existing link rather than duplicating a manual product.
                 match=c.execute('SELECT id FROM products WHERE url=?',(row['url'],)).fetchone()
-                if match:pid=match['id'];updated+=1
+                if match:
+                    pid=match['id'];updated+=1
+                    c.execute('UPDATE products SET name=?,url=?,kind=?,platform=?,category=?,description=?,price=?,commission=? WHERE id=?',(row['name'],row['url'],row['kind'],core.platform_for(row['url']),row['category'],row['description'],row['price'],row['commission'],pid))
                 else:
                     pid=uuid4().hex;added+=1
                     c.execute('INSERT INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?)',(pid,row['name'],row['url'],row['kind'],core.platform_for(row['url']),row['category'],row['description'],row['price'],row['commission'],'',now))
             c.execute('INSERT INTO catalog_items VALUES (?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET active=excluded.active,last_seen=excluded.last_seen',(row['source_id'],pid,int(row['active']),now))
-            c.execute('INSERT INTO auto_products VALUES (?,?,?,?,?) ON CONFLICT(product_id) DO UPDATE SET active=excluded.active,approved=excluded.approved,updated_at=excluded.updated_at',(pid,1,int(row['active']),4,now))
+            # Source availability is enforced by eligible(). Keep the operator's
+            # pause, authorization and variant limit across catalog refreshes.
+            c.execute('INSERT INTO auto_products VALUES (?,?,?,?,?) ON CONFLICT(product_id) DO NOTHING',(pid,1,1,4,now))
     put({'last_success':now,'message':f'Catálogo atualizado: {added} novos, {updated} atualizados, {sum(r["active"] for r in rows)} ativos.'})
     autopilot.event('catalog',f'Catálogo recebido: {added} novos produtos e {updated} atualizados.')
     return {'added':added,'updated':updated,'active':sum(r['active'] for r in rows)}
