@@ -56,6 +56,7 @@ class ProductSourceTests(unittest.TestCase):
 
     def test_parser_only_collects_bounded_json_ld_and_never_executes_scripts(self):
         parser = core.MetadataParser()
+        parser.feed('<script type>ignored</script><meta name><meta property>')
         parser.feed('<script>alert(1)</script>' + '<script type="application/ld+json">' + 'x' * 70000 + '</script>')
         self.assertEqual(len(parser.json_blocks), 1)
         self.assertEqual(len(parser.json_blocks[0]), 64000)

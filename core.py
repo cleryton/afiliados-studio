@@ -153,7 +153,7 @@ class MetadataParser(HTMLParser):
         self.json_buffer = None
 
     def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
+        attrs = {key: value or '' for key, value in attrs}
         if tag == 'script' and attrs.get('type', '').split(';')[0].strip().lower() == 'application/ld+json':
             self.json_buffer = '' if len(self.json_blocks) < 20 else None
         if tag == 'title':
