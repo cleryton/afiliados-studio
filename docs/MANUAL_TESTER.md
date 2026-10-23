@@ -219,3 +219,20 @@ Abra **Calendário**. Um vídeo manual mostra **Preparação do vídeo**. Um ví
 | T39 | Conferir agenda em 390 px de largura | Nome, datas, motivo e ações continuam legíveis sem alargar a página. |
 
 Os testes automatizados usam relógio controlado para conferir vários horários vencidos, mudança de dia em Brasília, reserva simultânea, limite diário por publicação confirmada e reinício sem repetir ajustes. Não é necessário alterar o relógio do Windows. Testes de agendamento confirmado e ID privado usam respostas simuladas; o modo tester não publica. Em operação real, um agendamento externo confirmado deve continuar sendo gerenciado e cancelado no destino.
+
+## 16. Fotos autorizadas do catálogo (0.9)
+
+O modo tester **não baixa fotos externas**, mesmo com autorização salva. Para conferir fotos sem rede, adicione uma imagem própria no cadastro e gere uma demonstração. A prévia com uma ilustração deve ser identificada como ilustração; não representa teste físico do produto.
+
+Em uma instalação de desenvolvimento isolada, no modo normal e sem conectar contas de publicação, é possível testar o catálogo com `image_url` apontando para uma foto própria em endereço público. Marque a opção específica para baixar e usar as fotos. Um link de exemplo sem autorização não deve ser usado como se fosse uma foto real.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T40 | Importar catálogo com `image_url`, sem autorização de fotos | Produto importado; nenhum download de foto. |
+| T41 | Autorizar uma foto própria válida no ambiente isolado | JPEG local disponível no produto e na próxima geração, com link de afiliado preservado. |
+| T42 | Conferir produto que já possui foto manual | Foto manual mantida; a fonte não a substitui. |
+| T43 | Retirar autorização ou mudar endereço da foto | Foto gerenciada anterior desassociada; resposta antiga não altera a escolha nova. |
+| T44 | Fonte sem foto válida | Pendência/falha com nova tentativa programada; vídeo ainda pode ser criado com texto. |
+| T45 | Conferir painel em tela estreita | Nomes, estado e mensagens legíveis; nenhum download no modo tester. |
+
+A suíte cobre arquivo inválido, resolução, tamanho, endereço privado, resposta lenta, falha de rede, concorrência, falta de espaço e retirada de autorização durante a leitura. Não é necessário encher o disco, usar URLs privadas nem interromper a internet do notebook para provocar esses casos. As fotos de teste são geradas localmente ou usam respostas controladas. A validação não comprova direitos autorais nem vendas.

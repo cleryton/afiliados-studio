@@ -4,9 +4,11 @@
 
 Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas, e integra o envio e agendamento ao YouTube pela API oficial. Sem assinatura de IA ou hospedagem. Energia e internet continuam sendo custos da operação.
 
+Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md). Ter uma conta é necessário para usar o canal, mas a integração atual continua em exportação manual ou rascunhos opcionais; criar a conta não libera postagem pública automática.
+
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.8.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.9.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -38,13 +40,23 @@ Projetos OAuth externos com status **Testing** recebem refresh tokens que expira
 
 ## Criação de conteúdo
 
+Na versão 0.9, o catálogo aceita o campo opcional **`image_url`** com o endereço público de uma foto do produto. Para baixar e usar a foto, marque a autorização específica no formulário do catálogo remoto ou na importação do arquivo JSON. A opção começa desmarcada. Sem ela, nenhum download de foto é iniciado. Use somente fotos que você tenha autorização para divulgar; o sistema verifica o arquivo, não a licença nem a correspondência visual com o produto.
+
+São aceitas fotos estáticas JPG, PNG e WebP de até 5 MB, com pelo menos 64 pixels por lado e até 16 megapixels. O importador limita leituras e prazos, rejeita endereços privados e usa as mesmas proteções de conexão do catálogo. A imagem é decodificada, orientada conforme EXIF, reduzida para até 1600 × 1600 e convertida em um novo JPEG local sem os metadados originais; transparência fica sobre fundo branco. Não executa conteúdo da fonte nem baixa fotos sugeridas automaticamente ao ler uma página de loja.
+
+O trabalhador tenta até duas fotos por ciclo de consulta do catálogo, em fila própria. Falhas aguardam 5, 15, 60 e depois até 240 minutos, com prazos persistidos. Fotos prontas podem ser conferidas novamente a cada 24 horas. Uma falha conserva a última foto válida quando ainda autorizada e permite continuar com texto. Não aguarda a foto para selecionar ou gerar um vídeo. Fotos manuais são preservadas. Produtos ou campanhas pausados não iniciam novos downloads; a pausa da produção não desliga a consulta independente do catálogo.
+
+Retirar a autorização de fotos remotas, mudar o endereço do catálogo remoto, remover o produto ou retirar/trocar `image_url` desassocia a foto gerenciada anterior. Uma resposta de download antiga não substitui a escolha atual. Pausar somente a consulta remota mantém a foto já autorizada, mas suspende novos downloads. Uma importação de arquivo tem sua própria autorização de fotos e substitui a lista ativa, como antes. Arquivos antigos não são apagados automaticamente, inclusive para preservar gerações em andamento; mantenha espaço para as mídias locais.
+
+Uma foto nova altera os dados visuais do produto: trabalhos automáticos locais sem edição e sem tentativa externa podem ser refeitos pelas regras de continuidade. Edições manuais continuam exigindo revisão. Vídeos já encaminhados a um destino não são substituídos. Em **Começar → Fotos do catálogo**, acompanhe pendências e falhas. O modo tester bloqueia downloads externos de fotos; use imagens próprias no cadastro ou testes controlados de desenvolvimento.
+
 Na versão 0.6, **Texto na tela → Trechos curtos** passa a mostrar partes do roteiro durante a cena, dentro do próprio MP4. Não depende de ativar legendas no destino. Os trechos são equilibrados e preservam as palavras do roteiro; sua temporização é aproximada, distribuída pelo texto e pela duração da cena. **Cena completa** mantém a apresentação anterior. As opções valem para novos roteiros ou após recriar um roteiro local. Arquivos anteriores não são alterados automaticamente.
 
 Em **Modo automático → Criação de conteúdo**, escolha roteiro **Completo** (até quatro características) ou **Curto** (até duas por vídeo), formato e ritmo da voz. O modo curto alterna os detalhes entre variações. As aberturas consideram nome do produto, estilo e público da campanha; a criação procura uma alternativa quando a abertura já aparece no histórico daquele produto.
 
 Os dados continuam vindo do cadastro: informe características específicas e confirmadas, como material, medidas, compatibilidade ou conteúdo incluído. O gerador não acrescenta experiência de uso, resultados, descontos ou benefícios que não tenham sido informados. A leitura do link depende do que a página pública oferece; revise os dados sugeridos.
 
-Na leitura do link, o sistema tenta identificar um único [produto em JSON-LD](https://schema.org/Product) e aproveitar descrição, material, cor, tamanho, modelo e características adicionais explícitas. Sem esse formato, usa título e descrição HTML. Listas ambíguas não combinam características de produtos diferentes. Não executa scripts da loja, não baixa fotos automaticamente e não infere comissão ou aprovação da afiliação. O link original é mantido.
+Na leitura do link, o sistema tenta identificar um único [produto em JSON-LD](https://schema.org/Product) e aproveitar descrição, material, cor, tamanho, modelo e características adicionais explícitas. Sem esse formato, usa título e descrição HTML. Listas ambíguas não combinam características de produtos diferentes. Não executa scripts da loja, não baixa fotos nessa leitura e não infere comissão ou aprovação da afiliação. O link original é mantido.
 
 Cada vídeo tem capítulos visuais, identificação de publicidade e encerramento. Uma foto autorizada aparece em um painel com contraste; sem foto, usa tipografia e numeração de cenas. Hashtags seguem o tipo e a categoria cadastrados. A estimativa de tempo no editor é uma previsão de leitura, não um limite garantido; a duração real é medida na verificação do MP4.
 
@@ -136,6 +148,7 @@ Formato da fonte (até 100 itens e 1 MB):
       "name": "Nome confirmado",
       "description": "Características verificadas, com pelo menos 30 caracteres.",
       "affiliate_url": "https://seu-link-oficial-de-afiliado",
+      "image_url": "https://sua-fonte-autorizada.example/foto-propria.jpg",
       "kind": "physical",
       "category": "Casa",
       "price": 120,
@@ -146,7 +159,7 @@ Formato da fonte (até 100 itens e 1 MB):
 }
 ```
 
-`kind` aceita `physical` ou `digital`. Preço e comissão são opcionais e informados pela fonte; não comprovam ganhos. Use um `id` estável por produto. O documento representa a lista completa atual, não apenas novos itens. Todos os itens são validados antes de alterar o banco. Exemplos não são importados para a operação real.
+`kind` aceita `physical` ou `digital`. `image_url` é opcional e só inicia downloads com a autorização específica de fotos. Preço e comissão são opcionais e informados pela fonte; não comprovam ganhos. Use um `id` estável por produto. O documento representa a lista completa atual, não apenas novos itens. Todos os itens são validados antes de alterar o banco. Exemplos não são importados para a operação real.
 
 Produtos da fonte são retidos quando a última leitura tem mais de 24 horas. Pausas retêm o envio. Mudanças no link ou descrição antes do primeiro upload refazem o conteúdo e a renderização automaticamente. Se já houver envio remoto, a publicação é retida e vídeos agendados pelo sistema podem voltar a privado. Confira o painel em caso de alteração no catálogo. Com o programa fechado ou sem acesso à internet, não é possível cancelar agendamentos remotos. Produtos manuais dependem da sua manutenção.
 

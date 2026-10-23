@@ -9,6 +9,7 @@ from uuid import uuid4
 import core
 
 DEFAULTS={'url':'','enabled':False,'authorized':False,'interval_hours':4,'next_check':None,'last_success':None,
+          'download_images':False,
           'last_attempt':None,'failures':0,'last_error':'','revision':'',
           'message':'Conecte um catálogo com seus links de afiliado.'}
 _tick_lock=threading.Lock()
@@ -24,6 +25,8 @@ def init():
     with core.db() as c:
         c.executescript('''CREATE TABLE IF NOT EXISTS catalog_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS catalog_items(source_id TEXT PRIMARY KEY,product_id TEXT NOT NULL REFERENCES products(id),active INTEGER NOT NULL,last_seen TEXT NOT NULL);''')
+    import catalog_media
+    catalog_media.init()
 
 
 def settings():
@@ -43,13 +46,21 @@ def put(values):
 def configure(payload):
     enabled=payload.get('enabled') is True
     authorized=payload.get('authorized') is True
+    images=payload.get('download_images') is True
+    if images and not authorized:raise ValueError('Confirme sua autorização dos materiais antes de importar fotos.')
     url=core.clean(payload.get('url',''),3000)
     if url:core.public_url(url)
     if enabled and (not authorized or not url):
         raise ValueError('Informe o catálogo e confirme sua afiliação e autorização de uso.')
-    put({'url':url,'enabled':enabled,'authorized':authorized,'next_check':None,
-         'revision':uuid4().hex,'failures':0,'last_error':'',
-         'message':'Catálogo configurado. A primeira consulta acontece em até um minuto.' if enabled else 'Consulta automática de catálogo pausada.'})
+    with core.db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        previous=settings()
+        _put(c,{'url':url,'enabled':enabled,'authorized':authorized,'download_images':images,'next_check':None,
+             'revision':uuid4().hex,'failures':0,'last_error':'',
+             'message':'Catálogo configurado. A primeira consulta acontece em até um minuto.' if enabled else 'Consulta automática de catálogo pausada.'})
+        if not images or not authorized or previous['url']!=url:
+            import catalog_media
+            for row in c.execute("SELECT product_id FROM catalog_media WHERE source_mode='remote'").fetchall():catalog_media.revoke(c,row['product_id'])
 
 
 def fetch(url):
@@ -83,11 +94,14 @@ def validate(document):
         url=core.public_url(row.get('affiliate_url'))
         if len(url)>1500:raise ValueError('Use links oficiais curtos de afiliado no catálogo (até 1500 caracteres).')
         kind=row.get('kind')
+        image_url=row.get('image_url') or ''
+        if image_url:image_url=core.public_url(image_url)
+        if len(image_url)>1500:raise ValueError('Use endereços de foto de até 1500 caracteres.')
         if kind not in ('physical','digital'):raise ValueError('O tipo deve ser physical ou digital.')
         if len(description)<30:raise ValueError('Cada produto precisa de pelo menos 30 caracteres de características verificadas.')
         if sid in identifiers or url in urls:raise ValueError('Há identificadores ou links duplicados no catálogo.')
         identifiers.add(sid);urls.add(url)
-        output.append({'source_id':sid,'name':name,'description':description,'url':url,'kind':kind,
+        output.append({'source_id':sid,'name':name,'description':description,'url':url,'kind':kind,'image_url':image_url,
           'category':core.clean(row.get('category','Geral'),50,True),
           'price':core.numeric(row.get('price'),10**7,optional=True),
           'commission':core.numeric(row.get('commission_percent'),100,optional=True),
@@ -95,16 +109,18 @@ def validate(document):
     return output
 
 
-def ingest(document,authorized=False,expected_revision=None):
+def ingest(document,authorized=False,expected_revision=None,download_images=False):
     if not authorized:raise ValueError('Confirme sua afiliação e a autorização dos dados antes de importar.')
     rows=validate(document)  # Validate every item before changing stored data.
-    import autopilot
+    import autopilot,catalog_media
     added=0;updated=0;now=core.stamp()
+    seen=set()
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
         if expected_revision is not None:
             config=settings()
             if not config['enabled'] or not config['authorized'] or config['revision']!=expected_revision:return None
+            download_images=config['download_images']
         c.execute('UPDATE catalog_items SET active=0')
         for row in rows:
             existing=c.execute('SELECT product_id FROM catalog_items WHERE source_id=?',(row['source_id'],)).fetchone()
@@ -124,6 +140,10 @@ def ingest(document,authorized=False,expected_revision=None):
             # Source availability is enforced by eligible(). Keep the operator's
             # pause, authorization and variant limit across catalog refreshes.
             c.execute('INSERT INTO auto_products VALUES (?,?,?,?,?) ON CONFLICT(product_id) DO NOTHING',(pid,1,1,4,now))
+            seen.add(pid)
+            catalog_media.grant(c,pid,row['image_url'],download_images and row['active'],'remote' if expected_revision is not None else 'file')
+        for old in c.execute('SELECT product_id FROM catalog_media').fetchall():
+            if old['product_id'] not in seen:catalog_media.revoke(c,old['product_id'])
         _put(c,{'last_success':now,'failures':0,'last_error':'',
                 'revision':uuid4().hex if expected_revision is None else expected_revision,
                 'next_check':(core.now()+timedelta(hours=settings()['interval_hours'])).isoformat(),
@@ -167,6 +187,7 @@ def eligible(pid):
 
 
 def state():
+    import catalog_media
     config=settings()
     with core.db() as c:count=c.execute('SELECT COUNT(*) FROM catalog_items WHERE active=1').fetchone()[0]
-    return {'settings':config,'active_products':count,'notice':'A fonte deve fornecer seus links de afiliado já emitidos. Esta conexão não cria conta nem garante comissão.'}
+    return {'settings':config,'active_products':count,'photos':catalog_media.state(),'notice':'A fonte deve fornecer seus links de afiliado já emitidos. Esta conexão não cria conta nem garante comissão.'}

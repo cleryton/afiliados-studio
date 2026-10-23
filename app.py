@@ -84,6 +84,10 @@ def catalog_worker():
     while not STOP.is_set():
         try:catalog.tick()
         except Exception as error:catalog.put({'message':str(error)[:500]})
+        try:
+            import catalog_media
+            catalog_media.tick()
+        except Exception:traceback.print_exc()
         STOP.wait(60)
 
 
@@ -250,7 +254,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/catalog/settings':
                 catalog.configure(payload);return self.respond(200,{'ok':True})
             if path=='/api/catalog/import':
-                return self.respond(200,catalog.ingest(payload.get('document'),payload.get('authorized') is True))
+                return self.respond(200,catalog.ingest(payload.get('document'),payload.get('authorized') is True,download_images=payload.get('download_images') is True))
             if path=='/api/catalog/sync':
                 catalog.put({'next_check':None});return self.respond(200,{'ok':True})
             if path=='/api/youtube/credentials':
