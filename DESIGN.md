@@ -1,5 +1,7 @@
 # Contrato de interface
 
+Continuidade 0.7: o catálogo mostra última tentativa, última atualização aceita e próxima consulta prevista, distinguindo pausa, consulta em andamento e falha com retomada. Falha não aparece como atualização confirmada. O painel não promete publicação nem mostra um prazo quando a consulta está pausada. Conferir leitura e foco do formulário em 1440x900 e 390x844, inclusive mensagem longa e histórico parcial. Dados simulados para esta conferência ficam apenas na memória da página.
+
 Resultados 0.6: origem e data da contagem automática junto das visualizações, campos opcionais como não informados e aviso quando não houver atualização confirmada. Cliques e comissões não informados permanecem desconhecidos. Métricas do tester são identificadas como teste local; nenhuma consulta externa ocorre nesse modo. Validar tabela com dados simulados somente no ambiente tester e estado vazio nos dois viewports.
 
 Operação 0.6: escolha entre texto por trechos e cena completa, deixando explícita a temporização aproximada. Começar mostra fila real com estado e motivo de retenção, sem ETA inventada. Validar escolha persistida, fila vazia, produto pausado, tentativa futura e geração real em 1440x900 e 390x844. Texto variável deve ser observado no MP4 decodificado, preservando roteiro e fonte. Recuperação automática não pode aceitar ou repetir uma tentativa de envio externo. Uma segunda instância no mesmo banco deve ser rejeitada antes de inicializar o banco; normal e tester continuam separados.

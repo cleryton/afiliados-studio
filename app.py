@@ -90,7 +90,7 @@ def catalog_worker():
 def readiness():
     with core.db() as c:
         ids=[r[0] for r in c.execute('SELECT product_id FROM auto_products WHERE active=1 AND approved=1')]
-    count=sum(catalog.eligible(pid) for pid in ids)
+    count=sum(catalog.eligible(pid) and (not (brief:=campaigns.for_product(pid)) or brief['active']) for pid in ids)
     yt=youtube_client.state()
     return {'products':count,'channel':yt['connected'],'ready':bool(count and yt['connected'])}
 

@@ -8,11 +8,12 @@ import catalog
 import content_engine
 
 
-def block_reason(c, job, claimed_buffer=False):
+def block_reason(c, job, claimed_buffer=False, local_hold=False):
     if not job['rights']:
         return ('rights', 'Autorize os materiais antes de gerar este vídeo.')
     if c.execute("SELECT 1 FROM sqlite_master WHERE name='youtube_jobs'").fetchone():
-        if c.execute('SELECT 1 FROM youtube_jobs WHERE job_id=?',(job['id'],)).fetchone():
+        remote=c.execute('SELECT stage,video_id FROM youtube_jobs WHERE job_id=?',(job['id'],)).fetchone()
+        if remote and not (local_hold and remote['stage']=='held_local' and not remote['video_id']):
             return ('external', 'Existe registro de envio ao YouTube. Confira o destino antes de alterar o vídeo.')
     auto=c.execute('SELECT * FROM auto_jobs WHERE job_id=?',(job['id'],)).fetchone()
     if not auto:return None
@@ -31,6 +32,16 @@ def block_reason(c, job, claimed_buffer=False):
     return None
 
 
+def resource_reason():
+    import diagnostics
+    resources=diagnostics.runtime()
+    if not resources['disk_ok']:
+        return ('storage', 'Geração aguardando pelo menos 512 MB livres no disco. Retoma após liberar espaço.')
+    if not resources['renderer']:
+        return ('dependencies', 'Geração aguardando as dependências de vídeo. Execute instalar.bat para corrigir.')
+    return None
+
+
 def recover_interrupted():
     with core.db() as c:
         ids=[r[0] for r in c.execute("SELECT jobs.id FROM jobs JOIN render_state ON render_state.job_id=jobs.id JOIN auto_jobs ON auto_jobs.job_id=jobs.id WHERE interrupted=1 AND jobs.status='error'")]
@@ -44,15 +55,49 @@ def changed(product, meta):
             (meta.get('campaign') or {}).get('revision')!=(brief or {}).get('revision'))
 
 
+def refresh_ready(jid=None):
+    """Requeue changed, untouched automatic work only before any remote attempt.
+
+    Do not generate here: the render claim owns planning and its final checks.
+    The transaction also serializes against a delivery claim or an editor save.
+    """
+    affected=[]
+    with core.db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        rows=c.execute("SELECT jobs.*,content_meta.payload FROM jobs JOIN auto_jobs ON auto_jobs.job_id=jobs.id JOIN content_meta ON content_meta.job_id=jobs.id WHERE jobs.status='ready'"+(' AND jobs.id=?' if jid else ''),(jid,) if jid else ()).fetchall()
+        for job in rows:
+            if block_reason(c,job,local_hold=True):continue
+            product=dict(c.execute('SELECT * FROM products WHERE id=?',(job['product_id'],)).fetchone())
+            meta=json.loads(job['payload'])
+            stale=changed(product,meta)
+            missing=not (core.DATA/'media'/job['id']/'video.mp4').is_file()
+            if not stale and not missing:continue
+            edited=stale and bool(meta.get('edited'))
+            status='draft' if edited else 'queued'
+            detail=('Dados alterados. Sua edição foi preservada; recrie ou revise o roteiro antes de gerar.' if edited else
+                    'Dados alterados. Aguardando recriação automática antes de gerar novamente.' if stale else
+                    'Arquivo local ausente. Aguardando nova geração com o roteiro preservado.')
+            c.execute('UPDATE jobs SET status=?,error=?,updated_at=? WHERE id=?',(status,detail,core.stamp(),job['id']))
+            c.execute('DELETE FROM editorial_reviews WHERE job_id=?',(job['id'],))
+            c.execute('DELETE FROM media_validations WHERE job_id=?',(job['id'],))
+            if c.execute("SELECT 1 FROM sqlite_master WHERE name='youtube_jobs'").fetchone():
+                c.execute("DELETE FROM youtube_jobs WHERE job_id=? AND stage='held_local' AND video_id=''",(job['id'],))
+            affected.append((job['id'],detail))
+    for job_id,detail in affected:autopilot.event('production',detail,job_id)
+    return [job_id for job_id,_ in affected]
+
+
 def claim_next():
     """A writer transaction prevents two workers from claiming the same job."""
     recover_interrupted()
+    refresh_ready()
+    resources=resource_reason()
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
         c.execute("UPDATE jobs SET status='queued',updated_at=? WHERE status='scheduled' AND due_at<=?",(core.stamp(),core.stamp()))
         rows=c.execute("SELECT jobs.* FROM jobs LEFT JOIN auto_jobs ON auto_jobs.job_id=jobs.id WHERE jobs.status='queued' AND (auto_jobs.retry_at IS NULL OR auto_jobs.retry_at<=?) ORDER BY jobs.created_at,jobs.id",(core.stamp(),)).fetchall()
         for row in rows:
-            reason=block_reason(c,row)
+            reason=block_reason(c,row) or resources
             if reason:
                 c.execute('INSERT INTO render_state(job_id,block_code,detail) VALUES (?,?,?) ON CONFLICT(job_id) DO UPDATE SET block_code=excluded.block_code,detail=excluded.detail',(row['id'],*reason))
                 continue
@@ -98,11 +143,12 @@ def prepare(job, product):
 
 
 def queue():
+    resources=resource_reason()
     with core.db() as c:
         rows=c.execute("SELECT jobs.*,products.name,auto_jobs.retry_at FROM jobs JOIN products ON products.id=jobs.product_id LEFT JOIN auto_jobs ON auto_jobs.job_id=jobs.id WHERE jobs.status IN ('queued','scheduled','rendering') ORDER BY jobs.created_at,jobs.id").fetchall()
         result=[]
         for row in rows:
-            reason=block_reason(c,row) if row['status']!='rendering' else None
+            reason=(block_reason(c,row) or resources) if row['status']!='rendering' else None
             state='blocked' if reason else row['status']
             detail=reason[1] if reason else {'queued':'Aguardando o próximo ciclo local.','scheduled':'Preparação programada para '+row['due_at'],'rendering':'Gerando imagens, voz e MP4 neste computador.'}[row['status']]
             if not reason and row['status']=='queued' and row['retry_at'] and datetime.fromisoformat(row['retry_at'])>core.now():

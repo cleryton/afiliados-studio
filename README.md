@@ -4,9 +4,9 @@
 
 Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas, e integra o envio e agendamento ao YouTube pela API oficial. Sem assinatura de IA ou hospedagem. Energia e internet continuam sendo custos da operação.
 
-Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar para 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
+Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.6.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.7.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -63,6 +63,18 @@ Na revisão manual, clique **Aprovar vídeo** depois de assistir. **Solicitar aj
 Pausar a campanha impede novas seleções e envios pelo sistema. Enquanto a rotina continua ativa, alterações ou revisão pendente podem reter um vídeo já enviado como privado na próxima consulta. Isso depende de conexão e resposta do Google: **confira e cancele agendamentos já enviados diretamente no YouTube Studio**. A pausa global interrompe as consultas locais e não cancela agendamentos remotos.
 
 ## Conferir a operação
+
+Na versão 0.7, a continuidade também cobre vídeos automáticos já prontos, antes de qualquer tentativa de envio:
+
+- Mudanças no produto ou na campanha recolocam o vídeo local na produção. O trabalhador refaz o roteiro com os dados atuais e gera outro MP4. Edições manuais são preservadas e voltam para revisão; aprovações e verificações antigas são invalidadas.
+- Um MP4 local ausente pode ser gerado novamente, mantendo o roteiro quando os dados continuam atuais. Registros com tentativa externa, inclusive resposta incerta, continuam exigindo conferência do destino. Uma retenção exclusivamente local do YouTube, sem ID ou tentativa de upload, pode voltar à produção.
+- Com menos de 512 MB livres ou dependências ausentes, a geração espera sem consumir tentativas. Após corrigir a condição, o próximo ciclo pode continuar, respeitando pausas e autorizações.
+- A pausa, a fonte, a autorização, o limite de três vídeos pendentes e a reserva de horários são conferidos novamente depois de criar o roteiro. Ciclos simultâneos não devem reservar a mesma vaga nem ultrapassar a fila.
+- A consulta do YouTube ignora registros com erro definitivo, resposta incerta ou prazo de consulta futuro ao escolher o lote seguinte. Também ignora trabalho já encaminhado ao Buffer; não alterna o destino para repetir um envio.
+
+O catálogo autorizado continua com intervalo normal de quatro horas. Falhas temporárias de rede ou da fonte usam esperas de 5, 15, 30, 60, 120 e depois até 240 minutos, salvas no banco. Arquivo inválido ou acesso recusado aguarda quatro horas. Uma consulta bem-sucedida zera a sequência de falhas. Os dados anteriores são preservados; itens sem confirmação por 24 horas continuam bloqueados para a rotina. Pausar, trocar a fonte ou importar um arquivo durante uma consulta impede que a resposta antiga substitua a escolha mais recente. O painel mostra tentativa, atualização aceita e próxima consulta; o horário é uma previsão enquanto o programa está aberto.
+
+Essas retomadas dependem de **programa aberto**, computador ligado e permissões válidas. Reabrir preserva prazos, mas esta versão não instala um serviço nem inicia com o Windows. Campanhas com revisão manual, edição desatualizada, três falhas de geração ou envio externo incerto continuam pedindo sua intervenção. A fila total de três vídeos pendentes é mantida para limitar acúmulo, inclusive quando algum item exige atenção.
 
 A página **Começar e acompanhar** mostra dependências de vídeo, espaço livre, produtos autorizados, acesso ao canal e o último teste local. Ela também mostra o próximo produto elegível, os horários em uso e publicações que aguardam resultados informados.
 

@@ -111,10 +111,13 @@ def timing(config=None):
             'reason':suggestion['detail'] if learned else ('Ainda faltam resultados comparáveis. Usando os horários de partida.' if config.get('timing_mode')=='history' else 'Usando os horários configurados na rotina.')}
 
 
-def next_slot(config,current):
+def next_slot(config,current,connection=None):
     hours=timing(config)['hours']
-    with core.db() as c:
-        slots=[datetime.fromisoformat(r[0]).astimezone(core.TZ) for r in c.execute("SELECT due_at FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status!='error'")]
+    def reserved(c):
+        return [datetime.fromisoformat(r[0]).astimezone(core.TZ) for r in c.execute("SELECT due_at FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status!='error'")]
+    if connection is not None:slots=reserved(connection)
+    else:
+        with core.db() as c:slots=reserved(c)
     for day in range(8):
         for hour in hours:
             slot=(current+timedelta(days=day)).replace(hour=hour,minute=0,second=0,microsecond=0)
@@ -182,6 +185,16 @@ def cycle():
     jid=uuid4().hex
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
+        # Planning can take time. Recheck pause, limits and the source before
+        # reserving a slot; another cycle may have committed in the meantime.
+        import production
+        latest_config=settings()
+        if not latest_config['enabled']:return None
+        if c.execute("SELECT COUNT(*) FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status!='published'").fetchone()[0]>=latest_config['backlog_limit']:return None
+        eligible=next((p for p in candidates(latest_config,core.now()) if p['id']==product['id']),None)
+        if not eligible or eligible['variant']!=product['variant'] or production.changed(eligible,meta):return None
+        slot=next_slot(latest_config,core.now(),connection=c)
+        if not slot:return None
         # The unique active-product index also protects simultaneous manual requests.
         if c.execute("SELECT 1 FROM jobs WHERE product_id=? AND status!='published'",(product['id'],)).fetchone():
             return None

@@ -50,7 +50,9 @@ class DeliveryTests(unittest.TestCase):
                 'paidProductPlacementDetails':{'hasPaidProductPlacement':paid},'statistics':{'viewCount':'42'}}
 
     def row(self,jid):
-        with core.db() as c:return dict(c.execute('SELECT * FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone())
+        with core.db() as c:
+            row=c.execute('SELECT * FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
+            return dict(row) if row else None
 
     def test_catalog_is_atomic_and_preserves_tracking_link(self):
         catalog.ingest([self.item],True)
@@ -241,12 +243,42 @@ class DeliveryTests(unittest.TestCase):
         with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
         upload.assert_not_called()
         self.assertEqual(core.get_job(job['id'])['status'],'queued')
+        import production
+        production.prepare(*production.claim_next())
         self.assertIn('Quatro divisórias',core.get_job(job['id'])['scenes'])
 
     def test_edit_is_locked_after_external_upload(self):
         job,product=self.ready();self.remote(job['id'],'scheduled')
         payload={'scenes':json.loads(job['scenes']),'caption':job['caption'],'due_at':job['due_at'],'rights':True,'action':'render'}
         with self.assertRaisesRegex(ValueError,'YouTube'):core.edit_job(job['id'],payload)
+
+    def test_old_delivery_snapshot_cannot_upload_work_already_requeued(self):
+        job,product=self.ready()
+        with core.db() as c:c.execute("UPDATE jobs SET status='queued' WHERE id=?",(job['id'],))
+        with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+        upload.assert_not_called()
+        self.assertIsNone(self.row(job['id']))
+
+    def test_pause_or_buffer_claim_during_review_blocks_youtube_initialization(self):
+        job,product=self.ready()
+        for condition in ('pause','buffer'):
+            with self.subTest(condition=condition):
+                autopilot.put_settings({'enabled':True})
+                def review(*args,**kwargs):
+                    if condition=='pause':autopilot.put_settings({'enabled':False})
+                    else:
+                        with core.db() as c:c.execute("UPDATE auto_jobs SET delivery='sending' WHERE job_id=?",(job['id'],))
+                    return {'allowed':True}
+                with patch('quality.inspect',side_effect=review),patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+                upload.assert_not_called();self.assertIsNone(self.row(job['id']))
+
+    def test_missing_local_video_returns_to_production_without_false_remote_failure(self):
+        job,product=self.ready()
+        (core.DATA/'media'/job['id']/'video.mp4').unlink()
+        with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+        upload.assert_not_called()
+        self.assertIsNone(self.row(job['id']))
+        self.assertEqual(core.get_job(job['id'])['status'],'queued')
 
 
 if __name__=='__main__':unittest.main()

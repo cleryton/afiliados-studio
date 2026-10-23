@@ -189,3 +189,19 @@ T24–T26 exigem produtos de teste autorizados na rotina local. O modo tester bl
 O modo tester não consulta métricas externas. Em **Resultados**, confira que cliques e comissões ainda não informados não aparecem como zeros confirmados. Na operação real, a leitura de visualizações, curtidas e comentários exige canal conectado e rotina ativa; somente vídeos confirmados como publicados pelo sistema são consultados. Ela não identifica cliques de afiliado nem vendas.
 
 Em um teste posterior com conta real autorizada, confira a data de leitura na tabela e compare com o YouTube Studio, considerando o atraso de atualização da API. Não é necessário esperar seis horas para validar respostas ausentes ou falhas: os testes automatizados cobrem esses casos com respostas simuladas. Uma falha não deve apagar a última contagem nem alterar cliques e comissões. Desconectar remove o cache de métricas. Sem conta real, a integração continua pendente de validação externa.
+
+## 14. Continuidade automática (0.7)
+
+Use somente produtos de demonstração no modo tester. A rotina precisa estar ativa e o produto autorizado. Vídeos criados manualmente não são convertidos em trabalhos automáticos. Ao terminar, pause a rotina. Não remova arquivos de produtos reais para provocar falhas.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T30 | Atualizar um produto de catálogo depois de o vídeo automático ficar pronto | Sem tentativa externa ou edição manual, volta à produção e gera conteúdo com os dados atuais, preservando o link. |
+| T31 | Fazer o mesmo com roteiro editado manualmente | Edição mantida; volta a rascunho e pede revisão/recriação, sem substituição silenciosa. |
+| T32 | Pausar produto ou campanha antes da atualização | Vídeo preservado e geração retida até reativar; o recomeço confere os dados atuais. |
+| T33 | Conferir a fila em condições de espaço insuficiente | Mensagem sobre 512 MB livres, sem gastar tentativas; não é necessário encher o disco para testar. |
+| T34 | Conferir atualização do catálogo em Começar, no modo normal de uma instalação de teste | Diferencia consulta pausada, última tentativa, dados aceitos e próxima consulta prevista. Sem confirmação, não mostra atualização bem-sucedida. |
+
+A suíte automatizada cobre falta de espaço, MP4 ausente, duas criações simultâneas, pausa durante criação e troca de fonte durante consulta. A recuperação de um arquivo ausente mantém o roteiro atual, mas exige nova revisão se a campanha assim determinar. Falhas temporárias do catálogo aguardam 5, 15, 30, 60, 120 e até 240 minutos; erro de arquivo ou acesso recusado aguarda quatro horas. Não é preciso desligar a internet nem esperar horas para validar esses casos: os testes usam respostas controladas e relógio simulado.
+
+No notebook, três gerações reais também podem ser conferidas em uma instalação isolada: produção inicial, atualização da fonte e reposição de arquivo local ausente. Nenhuma delas comprova publicação ou venda. O programa precisa continuar aberto; não é instalado um serviço de inicialização do Windows.

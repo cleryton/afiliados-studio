@@ -205,11 +205,20 @@ def process(job,product):
     if core.TESTER:return
     import autopilot,catalog,campaigns,quality
     jid=job['id'];config=settings()
-    with core.db() as c:row=c.execute('SELECT * FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
+    with core.db() as c:
+        current=c.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+        if not current or current['status']!='ready':return
+        job=dict(current)
+        product=dict(c.execute('SELECT * FROM products WHERE id=?',(job['product_id'],)).fetchone())
+        row=c.execute('SELECT * FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
     if row and row['stage'] in ('uncertain','failed','published'):return
     if row and row['next_check'] and datetime.fromisoformat(row['next_check'])>core.now():return
     file=core.DATA/'media'/jid/'video.mp4'
     try:
+        if not row and not file.is_file():
+            import production
+            production.refresh_ready(jid)
+            return
         if (not row or row['stage']=='uploading') and not file.is_file():raise ValueError('Arquivo MP4 ausente. Gere novamente antes de enviar.')
         with core.db() as c:
             meta=c.execute('SELECT payload FROM content_meta WHERE job_id=?',(jid,)).fetchone()
@@ -229,14 +238,8 @@ def process(job,product):
             with core.db() as c:c.execute('DELETE FROM youtube_jobs WHERE job_id=?',(jid,))
             row=None
         if not row and approved and changed:
-            # No upload exists, so regenerate outdated content before sending anything.
-            import content_engine
-            with core.db() as c:variant=c.execute('SELECT variant FROM auto_jobs WHERE job_id=?',(jid,)).fetchone()
-            scenes,caption,new_meta=content_engine.generate(product,variant['variant'] if variant else 0)
-            with core.db() as c:
-                c.execute("UPDATE jobs SET scenes=?,caption=?,status='queued',error='',updated_at=? WHERE id=?",(json.dumps(scenes,ensure_ascii=False),caption,core.stamp(),jid))
-                c.execute('INSERT INTO content_meta VALUES (?,?) ON CONFLICT(job_id) DO UPDATE SET payload=excluded.payload',(jid,json.dumps(new_meta,ensure_ascii=False)))
-            autopilot.event('production','Catálogo alterado: conteúdo refeito antes do primeiro envio.',jid)
+            import production
+            production.refresh_ready(jid)
             return
         if not approved or changed:
             if not row:
@@ -260,7 +263,13 @@ def process(job,product):
                 else:update_job(jid,error='Envio aguardando verificações editoriais. Confira a fila de revisão.')
             return
         if not row:
-            with core.db() as c:c.execute('INSERT INTO youtube_jobs(job_id,stage,updated_at) VALUES (?,?,?)',(jid,'initializing',core.stamp()))
+            import production
+            with core.db() as c:
+                c.execute('BEGIN IMMEDIATE')
+                current=c.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+                if not current or current['status']!='ready' or production.block_reason(c,current):return
+                if any(current[key]!=job[key] for key in ('scenes','caption','due_at')):return
+                c.execute('INSERT INTO youtube_jobs(job_id,stage,updated_at) VALUES (?,?,?)',(jid,'initializing',core.stamp()))
             if not quality.inspect(jid,verify_media=True)['allowed']:
                 with core.db() as c:c.execute("DELETE FROM youtube_jobs WHERE job_id=? AND stage='initializing'",(jid,))
                 return
@@ -322,7 +331,12 @@ def tick():
     import autopilot
     if not autopilot.settings()['enabled']:return
     with core.db() as c:
-        rows=c.execute("SELECT jobs.* FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status='ready' ORDER BY due_at LIMIT 3").fetchall()
+        rows=c.execute("""SELECT jobs.* FROM jobs JOIN auto_jobs ON auto_jobs.job_id=jobs.id
+            LEFT JOIN youtube_jobs ON youtube_jobs.job_id=jobs.id
+            WHERE jobs.status='ready' AND auto_jobs.delivery='local' AND auto_jobs.buffer_id=''
+            AND (youtube_jobs.stage IS NULL OR youtube_jobs.stage NOT IN ('uncertain','failed','published'))
+            AND (youtube_jobs.next_check IS NULL OR youtube_jobs.next_check<=?)
+            ORDER BY jobs.due_at,jobs.id LIMIT 3""",(core.stamp(),)).fetchall()
         products={r['id']:dict(r) for r in c.execute('SELECT * FROM products')}
     for row in rows:process(dict(row),products[row['product_id']])
     import insights
