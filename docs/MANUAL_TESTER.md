@@ -252,3 +252,19 @@ Abra **iniciar_tester.bat** e mantenha a janela do programa aberta. Em **Começa
 A suíte automatizada cobre queda de um processo filho real e retomada, limite de cinco reinícios, Ctrl+C, falhas temporárias, ciclo demorado, sete cópias, falta de espaço e cópia durante uma transação ainda não confirmada. Não mate processos reais, não provoque corrupção nem encha o disco para conferir esses casos. Modo tester continua sem publicação e sem consultas externas de fotos ou métricas.
 
 Cópias incluem links e dados privados. Não anexe o banco ou a pasta backups a Issues. Elas não incluem as credenciais separadas nem os vídeos. Restauração exige auxílio de desenvolvimento e conferência das publicações no destino; o aplicativo não restaura automaticamente. O supervisor só funciona quando se abre pelos arquivos iniciar e a janela permanece aberta; não foi instalado início com o Windows.
+
+## 18. Validar o fluxo antes de obter afiliação (0.11)
+
+Em **Começar → Teste completo antes da afiliação**, crie o vídeo de teste e assista à prévia. Esse clipe é próprio, identifica o teste e não divulga produtos. Não é necessário preencher link de afiliado nem cadastrar um produto. O modo tester continua bloqueando o envio externo.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T51 | Criar teste sem produtos ou contas | Vídeo e voz gerados localmente, com prévia; produtos e resultados comerciais permanecem vazios. |
+| T52 | Clicar novamente ou reabrir | Mesmo teste persistido; nenhum vídeo ou upload adicional. |
+| T53 | Usar modo tester | Preparação local disponível; nenhuma autorização de envio. |
+| T54 | Pausar teste | Novos passos retidos; a produção comercial não é ativada. |
+| T55 | Conferir tela estreita | Estados, botão de envio, pausa e mensagens cabem em 390 px. |
+
+Em validação posterior **no modo normal**, o titular deve entrar no Google, configurar a credencial OAuth e autorizar o canal. Clique **Autorizar envio privado e iniciar**. Acompanhe preparação, envio e processamento; abrir a página do vídeo antes do processamento não representa teste concluído. Só aceite o resultado quando o painel confirmar que a API respondeu com vídeo processado, privado e pertencente ao canal esperado. Confira a visibilidade no YouTube Studio. Esse resultado não comprova postagem pública ou afiliação.
+
+Não compartilhe senha, código de confirmação ou JSON OAuth. O teste tem pausa própria; uma requisição em andamento pode terminar como privada. Se aparecer envio incerto, confira o destino antes de qualquer intervenção. A suíte cobre troca de canal, arquivo alterado, falha de rede, retomada, resposta incerta e ausência de contas usando respostas simuladas; esses testes não substituem a primeira autorização e o envio em canal real.

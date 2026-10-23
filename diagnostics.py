@@ -51,7 +51,7 @@ def require_runtime():
     if not value['disk_ok']:raise ValueError('Libere pelo menos 512 MB no disco antes de gerar vídeos.')
 
 
-def run_probe(root):
+def run_probe(root,channel_test=False):
     """Use the same local font, speech script and codecs as the product renderer."""
     directory=root/'media'/'diagnostics'
     try:
@@ -59,11 +59,13 @@ def run_probe(root):
         from PIL import Image,ImageDraw
         import renderer,imageio_ffmpeg
         canvas=Image.new('RGB',(1280,720),'#142725');draw=ImageDraw.Draw(canvas)
-        draw.text((70,75),'TESTE LOCAL · NENHUM ENVIO PARA A INTERNET',font=renderer.font(25,True),fill='#cfe9a9')
+        heading='TESTE PRIVADO DO CANAL · SEM OFERTA COMERCIAL' if channel_test else 'TESTE LOCAL · NENHUM ENVIO PARA A INTERNET'
+        draw.text((70,75),heading,font=renderer.font(25,True),fill='#cfe9a9')
         renderer.text_block(draw,'Seu estúdio está criando vídeo e narração neste computador.',215,350,maximum=48)
         canvas.save(directory/'poster.png')
         source=directory/'speech.json';audio=directory/'speech.wav'
-        source.write_text(json.dumps({'text':'Teste do estúdio. Este vídeo foi criado no seu computador, sem publicar na internet.'},ensure_ascii=False),encoding='utf-8')
+        text='Teste do estúdio. Este vídeo próprio verifica a criação local e o envio privado autorizado ao canal. Não anuncia produtos nem contém oferta comercial.' if channel_test else 'Teste do estúdio. Este vídeo foi criado no seu computador, sem publicar na internet.'
+        source.write_text(json.dumps({'text':text},ensure_ascii=False),encoding='utf-8')
         voiced=False;duration=6
         try:
             subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-File',str(core.ROOT/'speech.ps1'),str(source),str(audio)],check=True,capture_output=True,timeout=45,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))

@@ -8,7 +8,7 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.10.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.11.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -40,6 +40,18 @@ Essas cópias contêm cadastros, links pessoais, roteiros, configurações e reg
 O supervisor opera enquanto sua janela está aberta. A versão não instala serviço nem inicialização com o Windows. Computador desligado, tampa que suspende o notebook, falta de rede, autorização vencida e configuração inicial pendente continuam limitando a operação. O primeiro envio em uma conta real permanece pendente de validação.
 
 ## Configuração inicial
+
+### Validar a operação antes da afiliação (0.11)
+
+Em **Começar → Teste completo antes da afiliação**, clique **Criar vídeo de teste**. O programa cria e verifica um clipe próprio identificado como teste privado, sem oferta nem link comercial. Não exige produto cadastrado ou conta de afiliado. Ao terminar, assista à prévia. A geração não envia nada ao YouTube.
+
+Conecte seu canal pela etapa 02 e clique **Autorizar envio privado e iniciar**. O teste usa a API oficial e sempre pede visibilidade **privada**, sem agenda ou notificação aos inscritos. Só aparece como confirmado depois de consultar o vídeo processado, privado e pertencente ao canal autorizado. Não ativa a rotina pública, não cria produto, não registra venda e não altera cliques ou comissões. O modo tester permite a preparação local e bloqueia o envio.
+
+Existe um único teste persistido por instalação: novos cliques não geram outro vídeo nem abrem outro upload. A sessão existente pode continuar após reiniciar. Uma interrupção ou resposta incerta durante a abertura do envio exige conferir o YouTube Studio; o programa não abre outro upload para substituir uma tentativa sem confirmação. Falhas de consulta usam esperas de 1, 2, 5, 15 e 30 minutos; após seis falhas, o teste pausa e oferece retomada. Pausar o teste é independente de pausar a rotina. Uma requisição já iniciada pode terminar no destino como privada.
+
+Para esse teste, a única conta necessária é a sua conta Google com canal YouTube, API habilitada e credencial OAuth de aplicativo para computador. O login, a confirmação de identidade e o consentimento do titular precisam ser concluídos pelo próprio usuário no Google; não envie senha ou código ao suporte. Afiliar produtos vem depois de confirmar o fluxo técnico. O envio em uma conta real só está validado quando houver o resultado confirmado no seu painel.
+
+### Ativar ofertas comerciais
 
 1. Crie sua conta num programa de afiliados, obtenha aprovação e gere ao menos um link de afiliado seu. O painel tem acesso ao programa da Hotmart; links físicos e digitais de outras plataformas também podem ser cadastrados.
 2. Em **Começar e acompanhar**, adicione o produto, as características verificadas e uma foto autorizada opcional. Clique **Autorizar** para permitir o uso desses dados nas variações automáticas.

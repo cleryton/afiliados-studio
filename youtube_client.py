@@ -41,6 +41,8 @@ def init():
         c.execute("UPDATE youtube_jobs SET stage='uncertain',error='O programa encerrou durante a criação do envio. Confira o YouTube Studio antes de tentar novamente.' WHERE stage='initializing'")
     import insights
     insights.init()
+    import channel_probe
+    channel_probe.init()
 
 
 def settings():
@@ -159,11 +161,17 @@ def metadata(job,product):
 
 def initialize_upload(job,product,file):
     if core.TESTER:raise ValueError('Uploads estão bloqueados no modo tester.')
+    initialize_media(job['id'],metadata(job,product),file)
+
+
+def initialize_media(media_id,body,file):
+    """Shared transport; callers must persist their own claim before this POST."""
+    if core.TESTER:raise ValueError('Uploads estão bloqueados no modo tester.')
     url='https://www.googleapis.com/upload/youtube/v3/videos?'+urlencode({'uploadType':'resumable','part':'snippet,status,paidProductPlacementDetails','notifySubscribers':'false'})
-    request=Request(url,data=json.dumps(metadata(job,product)).encode(),headers={'Authorization':'Bearer '+access_token(),'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':'video/mp4','X-Upload-Content-Length':str(file.stat().st_size)})
+    request=Request(url,data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+access_token(),'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':'video/mp4','X-Upload-Content-Length':str(file.stat().st_size)})
     with build_opener(NoRedirect()).open(request,timeout=25) as response:location=response.headers.get('Location','')
     if not session_valid(location):raise ValueError('O YouTube não confirmou uma sessão de envio válida.')
-    save_secret('session-'+job['id'],{'url':location})
+    save_secret('session-'+media_id,{'url':location})
 
 
 def transfer(jid,file):
@@ -376,7 +384,7 @@ def reconcile(jid,video_id):
 
 
 def state():
-    import insights
+    import insights,channel_probe
     with core.db() as c:rows=[dict(r) for r in c.execute('SELECT * FROM youtube_jobs ORDER BY updated_at DESC')]
-    return {'settings':settings(),'client_configured':secret_path('client').is_file(),'connected':secret_path('tokens').is_file() and bool(settings()['channel_id']),'jobs':rows,'metrics':insights.state(),
+    return {'settings':settings(),'client_configured':secret_path('client').is_file(),'connected':secret_path('tokens').is_file() and bool(settings()['channel_id']),'jobs':rows,'metrics':insights.state(),'test':channel_probe.state(),
             'notice':'Envio direto pela API oficial, com autorização inicial Google. Projetos e contas estão sujeitos a permissões, processamento e cotas do YouTube.'}
