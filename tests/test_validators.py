@@ -1,13 +1,25 @@
 import io
+from contextlib import redirect_stdout
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 from scripts import validate
 
 
 class ValidatorTests(unittest.TestCase):
+    def test_incomplete_suite_fails_with_recent_test_progress(self):
+        progress=b'Unrelated process output\ntest_first (tests.Suite) ... ok\ntest_waiting (tests.Suite) ... '
+        error=subprocess.TimeoutExpired(['python','-m','unittest'],480,stderr=progress)
+        output=io.StringIO()
+        with patch.object(validate.subprocess,'run',side_effect=error),redirect_stdout(output):
+            errors=validate.check_tests()
+        self.assertTrue(errors)
+        self.assertIn('test_waiting',output.getvalue())
+        self.assertNotIn('Unrelated process output',output.getvalue())
+
     def test_blocks_private_data_even_when_nested_or_disguised_by_case(self):
         for path in ['data/studio.sqlite', 'data-tester/video.mp4', 'artifacts/report.json', '.venv/pyvenv.cfg',
                      'docs/client_secret_google.json', 'web/CREDENTIALS.json', '.env.local', 'tokens.json',

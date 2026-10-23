@@ -151,8 +151,17 @@ def check_package(root=ROOT):
 
 
 def check_tests(root=ROOT):
-    result = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-q'],
-                            cwd=root, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=240)
+    try:
+        # Real FFmpeg renders make slower Windows runners exceed four minutes.
+        # Keep the suite bounded, with progress available if the bound is hit.
+        result = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'],
+                                cwd=root, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=480)
+    except subprocess.TimeoutExpired as error:
+        progress=error.stderr or ''
+        if isinstance(progress,bytes):progress=progress.decode('utf-8',errors='replace')
+        print('A suíte atingiu o limite de oito minutos. Últimos testes iniciados:')
+        for line in [line for line in progress.splitlines() if line.startswith('test_')][-8:]:print('  '+line[:400])
+        return ['A suíte não terminou em oito minutos. Confira os últimos testes; nenhum resultado foi considerado aprovado.']
     count = re.search(r'Ran (\d+) tests?', result.stderr)
     if result.returncode:
         print(result.stdout + result.stderr)

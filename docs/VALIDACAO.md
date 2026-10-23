@@ -28,6 +28,8 @@ Use um clone Git atualizado do repositório, instale o aplicativo e execute **va
 
 Essa execução confere fontes, recursos, privacidade dos caminhos, pacote e testes. Ela não abre o aplicativo nem usa os bancos de produção. O relatório contém nomes de verificações e erros técnicos. O histórico deve estar completo: uma cópia rasa é rejeitada. Para checar o histórico e o pacote é necessário usar uma cópia Git; o ZIP da release serve para usar o aplicativo, não para executar esses dois validadores de desenvolvimento.
 
+A suíte inclui renderizações reais de MP4 e pode levar vários minutos em máquinas lentas. O validador permite até oito minutos para a suíte completa, preservando todos os testes. Se atingir esse prazo, reprova a etapa e mostra os últimos testes iniciados para ajudar a investigar; não considera a execução incompleta aprovada.
+
 Ruff, Gitleaks e pip-audit são etapas adicionais de segurança no GitHub. `requirements-validation.txt` contém ferramentas de desenvolvimento e não altera as duas dependências do aplicativo. Para reproduzir Ruff e pip-audit localmente, instale essas ferramentas em um ambiente separado.
 
 ## Quando falhar
