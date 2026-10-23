@@ -6,7 +6,7 @@ Aplicativo local para Windows. Cria roteiros, vídeos com narração e legendas,
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.7.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.8.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -63,6 +63,14 @@ Na revisão manual, clique **Aprovar vídeo** depois de assistir. **Solicitar aj
 Pausar a campanha impede novas seleções e envios pelo sistema. Enquanto a rotina continua ativa, alterações ou revisão pendente podem reter um vídeo já enviado como privado na próxima consulta. Isso depende de conexão e resposta do Google: **confira e cancele agendamentos já enviados diretamente no YouTube Studio**. A pausa global interrompe as consultas locais e não cancela agendamentos remotos.
 
 ## Conferir a operação
+
+Na versão 0.8, a rotina ativa redistribui **reservas locais vencidas** antes de selecionar novos produtos, mesmo com a fila cheia. Trabalhos automáticos locais autorizados, na fila ou prontos, recebem o próximo horário disponível, respeitando as reservas futuras e o limite diário. Reservas a até dez minutos do horário atual também podem ser movidas para dar margem ao envio. Roteiro, MP4, revisão editorial e contagem de tentativas de geração são preservados. O último horário anterior e a data do ajuste ficam registrados no calendário.
+
+O limite diário considera a data de publicação confirmada dos vídeos automáticos quando ela está disponível, no horário de Brasília; não usa somente a antiga data planejada. Reservas locais vencidas não ocupam vagas futuras, enquanto envios externos sem confirmação continuam sendo tratados de forma conservadora. O sistema não conhece publicações feitas por fora dele e não garante um limite total para todo o canal.
+
+Em **Calendário**, cada item distingue preparação manual, publicação planejada localmente, envio em andamento e agendamento confirmado no YouTube. Um agendamento cujo horário passou ainda depende de confirmação pública. A agenda usa os horários efetivamente configurados na rotina ou aprendidos com resultados suficientes; não apresenta sugestões iniciais como se fossem a configuração atual.
+
+A recuperação não altera agendamentos já confirmados no destino, envios incertos, tentativas do Buffer, produtos/campanhas pausados ou vídeos manuais. Um upload privado com ID confirmado, ainda em processamento e sem agendamento confirmado, pode reservar um novo horário antes do primeiro pedido de agendamento. Esse ajuste permanece local até a API confirmar o agendamento; não cria outro upload. Reservas sem vaga nos próximos oito dias aguardam um ciclo futuro.
 
 Na versão 0.7, a continuidade também cobre vídeos automáticos já prontos, antes de qualquer tentativa de envio:
 

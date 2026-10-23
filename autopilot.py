@@ -30,6 +30,10 @@ def init():
         CREATE TABLE IF NOT EXISTS expenses (
           id TEXT PRIMARY KEY, created_at TEXT NOT NULL, description TEXT NOT NULL, amount REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS auto_schedule_changes (
+          job_id TEXT PRIMARY KEY REFERENCES jobs(id), previous_due_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL, changes INTEGER NOT NULL DEFAULT 1
+        );
         ''')
         columns={row['name'] for row in c.execute('PRAGMA table_info(auto_jobs)')}
         if 'render_failures' not in columns:
@@ -111,10 +115,22 @@ def timing(config=None):
             'reason':suggestion['detail'] if learned else ('Ainda faltam resultados comparáveis. Usando os horários de partida.' if config.get('timing_mode')=='history' else 'Usando os horários configurados na rotina.')}
 
 
-def next_slot(config,current,connection=None):
+def next_slot(config,current,connection=None,exclude_job_id=None):
     hours=timing(config)['hours']
     def reserved(c):
-        return [datetime.fromisoformat(r[0]).astimezone(core.TZ) for r in c.execute("SELECT due_at FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status!='error'")]
+        youtube=c.execute("SELECT 1 FROM sqlite_master WHERE name='youtube_jobs'").fetchone()
+        remote="EXISTS(SELECT 1 FROM youtube_jobs WHERE youtube_jobs.job_id=jobs.id AND (stage!='held_local' OR video_id!=''))" if youtube else '0'
+        rows=c.execute("""SELECT jobs.id,jobs.status,auto_jobs.delivery,auto_jobs.buffer_id,
+            CASE WHEN jobs.status='published' THEN COALESCE(jobs.published_at,jobs.due_at) ELSE jobs.due_at END AS slot
+            ,"""+remote+" AS remote_attempt FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status!='error'")
+        slots=[]
+        for row in rows:
+            if row['id']==exclude_job_id:continue
+            slot=datetime.fromisoformat(row['slot']).astimezone(core.TZ)
+            local=row['status']!='published' and row['delivery']=='local' and not row['buffer_id'] and not row['remote_attempt']
+            if local and slot<=current+timedelta(minutes=10):continue
+            slots.append(slot)
+        return slots
     if connection is not None:slots=reserved(connection)
     else:
         with core.db() as c:slots=reserved(c)
@@ -165,6 +181,8 @@ def cycle():
     config=settings()
     if not config['enabled']:
         return None
+    import planning
+    planning.recover_overdue()
     current=core.now()
     with core.db() as c:
         backlog=c.execute("SELECT COUNT(*) FROM jobs JOIN auto_jobs ON job_id=jobs.id WHERE jobs.status!='published'").fetchone()[0]

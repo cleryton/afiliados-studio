@@ -205,3 +205,17 @@ Use somente produtos de demonstração no modo tester. A rotina precisa estar at
 A suíte automatizada cobre falta de espaço, MP4 ausente, duas criações simultâneas, pausa durante criação e troca de fonte durante consulta. A recuperação de um arquivo ausente mantém o roteiro atual, mas exige nova revisão se a campanha assim determinar. Falhas temporárias do catálogo aguardam 5, 15, 30, 60, 120 e até 240 minutos; erro de arquivo ou acesso recusado aguarda quatro horas. Não é preciso desligar a internet nem esperar horas para validar esses casos: os testes usam respostas controladas e relógio simulado.
 
 No notebook, três gerações reais também podem ser conferidas em uma instalação isolada: produção inicial, atualização da fonte e reposição de arquivo local ausente. Nenhuma delas comprova publicação ou venda. O programa precisa continuar aberto; não é instalado um serviço de inicialização do Windows.
+
+## 15. Agenda e retomada após ficar offline (0.8)
+
+Abra **Calendário**. Um vídeo manual mostra **Preparação do vídeo**. Um vídeo da rotina, antes de qualquer envio, mostra **Publicação planejada**: isso ainda não é confirmação de agendamento ou publicação. A agenda deve mostrar os horários salvos na rotina, inclusive quando eles diferem da sugestão inicial.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T35 | Observar um trabalho automático com horário vencido, com rotina ativa e produto autorizado | Recebe uma nova reserva local; calendário mostra data anterior e data do ajuste. Não cria outro roteiro nem outro upload. |
+| T36 | Pausar a rotina, o produto ou a campanha antes da retomada | Data preservada até a condição ser corrigida; não ignora pausas nem materiais sem autorização. |
+| T37 | Conferir vídeo manual e vídeo da rotina no calendário | Preparação manual e intenção de publicação têm rótulos diferentes. |
+| T38 | Conferir uma reserva ajustada | Nova data visível, roteiro mantido e explicação de que o destino ainda precisa confirmar. |
+| T39 | Conferir agenda em 390 px de largura | Nome, datas, motivo e ações continuam legíveis sem alargar a página. |
+
+Os testes automatizados usam relógio controlado para conferir vários horários vencidos, mudança de dia em Brasília, reserva simultânea, limite diário por publicação confirmada e reinício sem repetir ajustes. Não é necessário alterar o relógio do Windows. Testes de agendamento confirmado e ID privado usam respostas simuladas; o modo tester não publica. Em operação real, um agendamento externo confirmado deve continuar sendo gerenciado e cancelado no destino.

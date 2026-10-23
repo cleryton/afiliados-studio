@@ -308,9 +308,9 @@ def process(job,product):
             if config['visibility']=='public':
                 due=datetime.fromisoformat(job['due_at'])
                 if due<core.now()+timedelta(minutes=5):
-                    due=autopilot.next_slot(autopilot.settings(),core.now())
+                    import planning
+                    due=planning.reserve_late(jid,processing=True)
                     if not due:return
-                    with core.db() as c:c.execute('UPDATE jobs SET due_at=?,updated_at=? WHERE id=?',(due.isoformat(),core.stamp(),jid))
                 target={'privacyStatus':'private','publishAt':due.astimezone(timezone.utc).isoformat().replace('+00:00','Z'),'selfDeclaredMadeForKids':False,'containsSyntheticMedia':bool(job.get('voice'))}
             else:target={'privacyStatus':config['visibility'],'selfDeclaredMadeForKids':False,'containsSyntheticMedia':bool(job.get('voice'))}
             api('videos?part=status',{'id':video_id,'status':target},'PUT')

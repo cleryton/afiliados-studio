@@ -118,14 +118,14 @@ def retry_render(jid):
 
 
 def state():
-    import autopilot,catalog,youtube_client,production
+    import autopilot,catalog,youtube_client,production,planning,campaigns
     resources=runtime();config=autopilot.settings();channel=youtube_client.state();test=report()
     options=autopilot.candidates(config,core.now())
     with core.db() as c:
         active=[r[0] for r in c.execute('SELECT product_id FROM auto_products WHERE active=1 AND approved=1')]
         jobs=[dict(r) for r in c.execute('SELECT jobs.id,products.name,jobs.status,jobs.error,jobs.due_at,jobs.results_recorded_at FROM jobs JOIN products ON products.id=jobs.product_id')]
         product_count=c.execute('SELECT COUNT(*) FROM products').fetchone()[0]
-    fresh=sum(catalog.eligible(pid) for pid in active)
+    fresh=sum(catalog.eligible(pid) and (not (brief:=campaigns.for_product(pid)) or brief['active']) for pid in active)
     checks=[
         {'label':'Geração de vídeo','status':'ok' if resources['renderer'] else 'error','detail':'Dependências locais disponíveis.' if resources['renderer'] else 'Instale as dependências indicadas no README.','href':'#automation'},
         {'label':'Espaço livre','status':'ok' if resources['disk_ok'] else 'error','detail':f"{resources['free_mb']} MB disponíveis; mínimo de 512 MB.",'href':'#start'},
@@ -140,6 +140,6 @@ def state():
     if options:
         p=options[0];next_product={'id':p['id'],'name':p['name'],'variant':p['variant']+1,'recorded_results':p['recorded_count'],
                                  'reason':'Primeiro conteúdo deste produto.' if not p['sample_count'] else 'Nova variação elegível; intervalo e limite por produto respeitados.'}
-    return {'checks':checks,'test':test,'errors':errors,'next_product':next_product,'timing':autopilot.timing(config),'queue':production.queue(),
+    return {'checks':checks,'test':test,'errors':errors,'next_product':next_product,'timing':autopilot.timing(config),'queue':production.queue(),'plan':planning.state(),
             'pending_results':sum(j['status']=='published' and not j['results_recorded_at'] for j in jobs),
             'runtime_ok':resources['renderer'] and resources['disk_ok']}
