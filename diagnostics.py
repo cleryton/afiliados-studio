@@ -119,6 +119,7 @@ def retry_render(jid):
 
 def state():
     import autopilot,catalog,youtube_client,production,planning,campaigns
+    import runtime_service,maintenance
     resources=runtime();config=autopilot.settings();channel=youtube_client.state();test=report()
     options=autopilot.candidates(config,core.now())
     with core.db() as c:
@@ -132,6 +133,14 @@ def state():
         {'label':'Produtos autorizados','status':'ok' if fresh else 'pending','detail':f'{fresh} produtos ativos com fonte válida.' if fresh else 'Adicione seu link de afiliado e autorize o produto.','href':'#products'},
         {'label':'Canal YouTube','status':'ok' if channel['connected'] and channel['settings']['channel_verified'] else 'pending','detail':('Acesso confirmado em '+channel['settings']['last_verified_at']) if channel['connected'] and channel['settings']['channel_verified'] else ('Autorização salva; verifique o acesso.' if channel['connected'] else 'Conecte seu canal na etapa 02.'),'href':'#start'},
         {'label':'Teste de vídeo e voz','status':'ok' if test['status']=='passed' else 'warning' if test['status']=='warning' else 'pending','detail':test['message'],'href':'#start'}]
+    services=runtime_service.state();backup=maintenance.state()
+    issues=[s for s in services if s['status'] in ('retry','slow','stopped')]
+    starting=not services or any(not s['last_success'] for s in services)
+    checks.extend([
+        {'label':'Rotinas em segundo plano','status':'warning' if issues else 'pending' if starting else 'ok',
+         'detail':('Aguardando retomada ou conferência: '+', '.join(s['name'] for s in issues)+'.') if issues else ('Iniciando as rotinas locais; aguardando o primeiro ciclo.' if starting else 'Rotinas locais respondendo; falhas temporárias têm nova tentativa.'),'href':'#start'},
+        {'label':'Cópia local do banco','status':'ok' if backup['status']=='ok' else 'warning' if backup['status']=='warning' else 'pending',
+         'detail':backup['message']+(' Última cópia: '+backup['last_success'] if backup.get('last_success') else ''),'href':'#help'}])
     if core.TESTER:
         checks[2]={'label':'Cadastro local','status':'ok' if product_count else 'pending','detail':f'{product_count} cadastros no banco de testes.' if product_count else 'Crie um vídeo de demonstração para testar o fluxo.','href':'#start'}
         checks[3]={'label':'Proteção contra publicação','status':'ok','detail':'Envios externos bloqueados. Você não precisa conectar contas.','href':'#help'}
@@ -142,4 +151,4 @@ def state():
                                  'reason':'Primeiro conteúdo deste produto.' if not p['sample_count'] else 'Nova variação elegível; intervalo e limite por produto respeitados.'}
     return {'checks':checks,'test':test,'errors':errors,'next_product':next_product,'timing':autopilot.timing(config),'queue':production.queue(),'plan':planning.state(),
             'pending_results':sum(j['status']=='published' and not j['results_recorded_at'] for j in jobs),
-            'runtime_ok':resources['renderer'] and resources['disk_ok']}
+            'runtime_ok':resources['renderer'] and resources['disk_ok'],'services':services,'backup':backup}

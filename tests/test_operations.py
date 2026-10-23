@@ -106,7 +106,10 @@ class OperationsTests(unittest.TestCase):
     def test_malformed_probe_report_does_not_break_dashboard(self):
         diagnostics.report_path().write_text('[]')
         self.assertEqual(diagnostics.report()['status'],'idle')
-        self.assertEqual(len(diagnostics.state()['checks']),5)
+        labels={c['label'] for c in diagnostics.state()['checks']}
+        self.assertIn('Rotinas em segundo plano',labels)
+        self.assertIn('Cópia local do banco',labels)
+        self.assertEqual(len(labels),7)
 
     def test_probe_is_single_flight_and_does_not_create_product_jobs(self):
         fake=MagicMock();fake.is_alive.return_value=True

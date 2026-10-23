@@ -7,7 +7,6 @@ import os
 import re
 import secrets
 import threading
-import time
 import traceback
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -28,67 +27,41 @@ MAX_BODY = 12_000_000
 
 
 def worker():
-    next_auto=0
-    while not STOP.is_set():
-        try:
-            if os.name=='nt':
-                # The request belongs to this worker; it never edits the power plan.
-                flags=0x80000001 if autopilot.settings()['enabled'] else 0x80000000
-                ctypes.windll.kernel32.SetThreadExecutionState(flags)
-            if time.monotonic()>=next_auto:
-                next_auto=time.monotonic()+60
-                try:
-                    autopilot.cycle()
-                except Exception as exc:
-                    autopilot.event('attention',str(exc))
-            import production
-            claimed=production.claim_next()
-            if claimed:
-                job,product=claimed
-                try:
-                    prepared=production.prepare(job,product)
-                    if not prepared:
-                        STOP.wait(2);continue
-                    job,product=prepared
-                    from renderer import render
-                    voiced, warning = render(job, product)
-                    with core.db() as c:
-                        c.execute("UPDATE jobs SET status='ready',voice=?,error=?,updated_at=? WHERE id=?", (int(voiced), warning, core.stamp(), job['id']))
-                except Exception:
-                    traceback.print_exc()
-                    with core.db() as c:
-                        c.execute("UPDATE jobs SET status='error',error=?,updated_at=? WHERE id=?", ('Não foi possível gerar o MP4. Confira as dependências, reduza o texto se necessário e tente novamente. Veja o terminal para detalhes.', core.stamp(), job['id']))
-                    autopilot.render_failed(job['id'])
-        except Exception:
-            traceback.print_exc()
-        STOP.wait(2)
+    import production
+    if os.name=='nt':
+        # The request belongs to this worker; it never edits the power plan.
+        flags=0x80000001 if autopilot.settings()['enabled'] else 0x80000000
+        ctypes.windll.kernel32.SetThreadExecutionState(flags)
+    claimed=production.claim_next()
+    if not claimed:return
+    job,product=claimed
+    try:
+        prepared=production.prepare(job,product)
+        if not prepared:return
+        job,product=prepared
+        from renderer import render
+        voiced, warning = render(job, product)
+        with core.db() as c:
+            c.execute("UPDATE jobs SET status='ready',voice=?,error=?,updated_at=? WHERE id=?", (int(voiced), warning, core.stamp(), job['id']))
+    except Exception:
+        traceback.print_exc()
+        with core.db() as c:
+            c.execute("UPDATE jobs SET status='error',error=?,updated_at=? WHERE id=?", ('Não foi possível gerar o MP4. Confira as dependências, reduza o texto se necessário e tente novamente. Veja o terminal para detalhes.', core.stamp(), job['id']))
+        autopilot.render_failed(job['id'])
 
 
 def delivery_worker():
     import media_bridge
-    while not STOP.is_set():
-        try:
-            if core.TESTER:
-                STOP.wait(60);continue
-            if youtube_client.settings()['enabled']:
-                youtube_client.tick()
-            else:
-                autopilot.sync()
-                autopilot.delivery_cycle(media_bridge.media_url)
-        except Exception as exc:
-            autopilot.put_settings({'status':str(exc)[:800]})
-        STOP.wait(60)
+    if core.TESTER:return
+    if youtube_client.settings()['enabled']:
+        youtube_client.tick()
+    else:
+        autopilot.sync()
+        autopilot.delivery_cycle(media_bridge.media_url)
 
 
 def catalog_worker():
-    while not STOP.is_set():
-        try:catalog.tick()
-        except Exception as error:catalog.put({'message':str(error)[:500]})
-        try:
-            import catalog_media
-            catalog_media.tick()
-        except Exception:traceback.print_exc()
-        STOP.wait(60)
+    catalog.tick()
 
 
 def readiness():
@@ -379,14 +352,14 @@ def main():
         import imageio_ffmpeg
     except ImportError:
         print('Instale as dependências gratuitas: python -m pip install -r requirements.txt')
-        raise SystemExit(1)
+        raise SystemExit(2)
     from instance_lock import InstanceLock
     try:
         with InstanceLock(core.DATA):
             serve(args)
     except ValueError as error:
         print(str(error),flush=True)
-        raise SystemExit(1) from None
+        raise SystemExit(3) from None
 
 
 def serve(args):
@@ -399,10 +372,16 @@ def serve(args):
         server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     except OSError:
         print(f'A porta {args.port} está ocupada. Use python app.py --port 8766')
-        raise SystemExit(1)
-    threading.Thread(target=worker, daemon=True).start()
-    threading.Thread(target=delivery_worker, daemon=True).start()
-    threading.Thread(target=catalog_worker, daemon=True).start()
+        raise SystemExit(4)
+    import catalog_media,maintenance,runtime_service
+    runtime_service.start([
+        ('planejamento',autopilot.cycle,60,300),
+        ('produção',worker,2,600),
+        ('entrega',delivery_worker,60,600),
+        ('catálogo',catalog_worker,60,300),
+        ('fotos',catalog_media.tick,60,120),
+        ('cópias',maintenance.tick,60,60),
+    ],STOP)
     url = f'http://127.0.0.1:{args.port}'
     print(f'Afiliados Studio {VERSION} | '+('MODO TESTER · PUBLICAÇÃO BLOQUEADA | ' if core.TESTER else '')+f'{url} | Ctrl+C para encerrar', flush=True)
     if args.open:

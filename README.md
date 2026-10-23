@@ -8,7 +8,7 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.9.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.10.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -27,6 +27,18 @@ python app.py --open
 
 Abra http://127.0.0.1:8765/#start. Mantenha o programa aberto e o notebook ligado, com internet. A rotina impede suspensão automática enquanto está ativa, sem modificar permanentemente o plano de energia. Fechar a tampa pode suspender o notebook conforme a configuração do Windows.
 
+## Continuidade sem acompanhamento (0.10)
+
+Abrir por **iniciar.bat** ou **iniciar_tester.bat** também inicia um supervisor visível. Se o processo do aplicativo cair inesperadamente, ele tenta reabrir até cinco vezes, após 5, 15, 30, 60 e 120 segundos. Depois de uma hora contínua, uma nova queda começa outra sequência. O navegador abre somente na primeira execução. Encerrar normalmente, usar Ctrl+C, já existir outra instância ou faltar configuração de instalação/porta não provoca reinícios. Mantenha a janela aberta; iniciar diretamente com `python app.py` não usa esse supervisor. A retomada respeita pausas e autorizações salvas e não cria novo upload para um envio incerto.
+
+Planejamento, produção, entrega, catálogo, fotos e cópias do banco têm ciclos independentes. Um erro inesperado em uma rotina aguarda 5, 15, 60 e até 300 segundos antes de tentar o próximo ciclo; operações de catálogo, imagens e renderização mantêm também suas próprias esperas e limites. O checklist mostra falhas, início e ciclos demorados. Um ciclo demorado pede conferência; o programa não dispara outro ciclo concorrente para tentar substituí-lo.
+
+O banco recebe uma cópia local verificada ao abrir e a cada 24 horas de operação, em **data/backups** (ou **data-tester/backups**). Conservamos até sete cópias com nomes gerados pelo programa. A cópia usa a API de backup do SQLite, confere integridade e referências, registra SHA-256 local e preserva a última cópia válida se a próxima falhar. Falhas aguardam 30 minutos. A operação requer 512 MB livres mais margem para o banco, limitado a 256 MB; ela não preenche o disco com tentativas ilimitadas. Fragmentos de cópias interrompidas são descartados antes da próxima tentativa.
+
+Essas cópias contêm cadastros, links pessoais, roteiros, configurações e registros de envio: mantenha-as privadas. Não incluem os arquivos separados de credenciais, fotos ou vídeos. Não são enviadas ao GitHub ou a um serviço externo e não substituem uma cópia em outro disco. Restaurar requer análise dos envios existentes no destino; não há restauração automática que possa reapresentar uma publicação antiga. **Não substitua o banco enquanto o programa estiver aberto.**
+
+O supervisor opera enquanto sua janela está aberta. A versão não instala serviço nem inicialização com o Windows. Computador desligado, tampa que suspende o notebook, falta de rede, autorização vencida e configuração inicial pendente continuam limitando a operação. O primeiro envio em uma conta real permanece pendente de validação.
+
 ## Configuração inicial
 
 1. Crie sua conta num programa de afiliados, obtenha aprovação e gere ao menos um link de afiliado seu. O painel tem acesso ao programa da Hotmart; links físicos e digitais de outras plataformas também podem ser cadastrados.
@@ -44,7 +56,7 @@ Na versão 0.9, o catálogo aceita o campo opcional **`image_url`** com o endere
 
 São aceitas fotos estáticas JPG, PNG e WebP de até 5 MB, com pelo menos 64 pixels por lado e até 16 megapixels. O importador limita leituras e prazos, rejeita endereços privados e usa as mesmas proteções de conexão do catálogo. A imagem é decodificada, orientada conforme EXIF, reduzida para até 1600 × 1600 e convertida em um novo JPEG local sem os metadados originais; transparência fica sobre fundo branco. Não executa conteúdo da fonte nem baixa fotos sugeridas automaticamente ao ler uma página de loja.
 
-O trabalhador tenta até duas fotos por ciclo de consulta do catálogo, em fila própria. Falhas aguardam 5, 15, 60 e depois até 240 minutos, com prazos persistidos. Fotos prontas podem ser conferidas novamente a cada 24 horas. Uma falha conserva a última foto válida quando ainda autorizada e permite continuar com texto. Não aguarda a foto para selecionar ou gerar um vídeo. Fotos manuais são preservadas. Produtos ou campanhas pausados não iniciam novos downloads; a pausa da produção não desliga a consulta independente do catálogo.
+A rotina de fotos tenta até duas fotos por ciclo de um minuto, em fila própria. Falhas aguardam 5, 15, 60 e depois até 240 minutos, com prazos persistidos. Fotos prontas podem ser conferidas novamente a cada 24 horas. Uma falha conserva a última foto válida quando ainda autorizada e permite continuar com texto. Não aguarda a foto para selecionar ou gerar um vídeo. Fotos manuais são preservadas. Produtos ou campanhas pausados não iniciam novos downloads; a pausa da produção não desliga a consulta independente do catálogo.
 
 Retirar a autorização de fotos remotas, mudar o endereço do catálogo remoto, remover o produto ou retirar/trocar `image_url` desassocia a foto gerenciada anterior. Uma resposta de download antiga não substitui a escolha atual. Pausar somente a consulta remota mantém a foto já autorizada, mas suspende novos downloads. Uma importação de arquivo tem sua própria autorização de fotos e substitui a lista ativa, como antes. Arquivos antigos não são apagados automaticamente, inclusive para preservar gerações em andamento; mantenha espaço para as mídias locais.
 

@@ -236,3 +236,19 @@ Em uma instalação de desenvolvimento isolada, no modo normal e sem conectar co
 | T45 | Conferir painel em tela estreita | Nomes, estado e mensagens legíveis; nenhum download no modo tester. |
 
 A suíte cobre arquivo inválido, resolução, tamanho, endereço privado, resposta lenta, falha de rede, concorrência, falta de espaço e retirada de autorização durante a leitura. Não é necessário encher o disco, usar URLs privadas nem interromper a internet do notebook para provocar esses casos. As fotos de teste são geradas localmente ou usam respostas controladas. A validação não comprova direitos autorais nem vendas.
+
+## 17. Operação contínua e cópias locais (0.10)
+
+Abra **iniciar_tester.bat** e mantenha a janela do programa aberta. Em **Começar → Conferir a operação**, aguarde **Rotinas em segundo plano** e **Cópia local do banco**. A primeira cópia normalmente termina no primeiro minuto. Os testes e as cópias permanecem separados dos dados reais.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T46 | Abrir e aguardar o primeiro ciclo | Checklist diferencia início das rotinas e cópia verificada; não informa publicação. |
+| T47 | Conferir a pasta data-tester/backups | Uma cópia SQLite; data de sucesso no painel. Reabrir no mesmo dia preserva a cópia sem criar outra desnecessária. |
+| T48 | Encerrar com Ctrl+C e reabrir | Encerramento não dispara retomada; reabrir mantém cadastros e prazos. |
+| T49 | Abrir o mesmo modo duas vezes | Segunda janela informa instância existente; não entra em ciclo de reinício nem modifica o banco aberto. |
+| T50 | Conferir a tela estreita | As duas verificações novas e mensagens longas permanecem legíveis. |
+
+A suíte automatizada cobre queda de um processo filho real e retomada, limite de cinco reinícios, Ctrl+C, falhas temporárias, ciclo demorado, sete cópias, falta de espaço e cópia durante uma transação ainda não confirmada. Não mate processos reais, não provoque corrupção nem encha o disco para conferir esses casos. Modo tester continua sem publicação e sem consultas externas de fotos ou métricas.
+
+Cópias incluem links e dados privados. Não anexe o banco ou a pasta backups a Issues. Elas não incluem as credenciais separadas nem os vídeos. Restauração exige auxílio de desenvolvimento e conferência das publicações no destino; o aplicativo não restaura automaticamente. O supervisor só funciona quando se abre pelos arquivos iniciar e a janela permanece aberta; não foi instalado início com o Windows.
