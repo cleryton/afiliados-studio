@@ -289,3 +289,21 @@ Os logs locais são limitados a dois arquivos de até 2 MB em data. Eles são pr
 Uma autorização Google pendente pode continuar após reiniciar o aplicativo dentro de dez minutos, com o pedido protegido pelo Windows. Ela só é consumida uma vez; uma tentativa nova substitui a anterior. Não é necessário provocar falha durante um consentimento real: estado incorreto, expiração, troca de tentativa e retomada são testados com respostas controladas.
 
 **Conectar e testar em privado** pede somente o envio do clipe demonstrativo já pronto. Não ativa a rotina pública nem cria ofertas comerciais. Conectar pela etapa 02 continua disponível sem iniciar teste. Login, revisão das permissões e consentimento do canal são realizados pelo titular no navegador padrão.
+
+## 20. Primeiro envio comercial sem esperar o horário (0.13)
+
+O teste privado e a demonstração não são uma oferta com comissão. Para validar o fluxo comercial no modo normal, é preciso ter afiliação aprovada, link próprio e autorização dos dados e materiais do produto. O cadastro e os termos do programa são concluídos pessoalmente pelo titular.
+
+Com produto autorizado e operação pública ativa, aguarde o vídeo ficar pronto, assista na Fila de revisão e use **Publicar agora no YouTube**. O clique pede a publicação pública desse vídeo após processamento, identificação comercial e verificações. Não adianta nem cancela outros agendamentos. “Solicitada” ou “aguardando confirmação” não significa publicado.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T62 | Abrir vídeo automático pronto no tester | Aviso de publicação externa bloqueada, sem botão de publicar. |
+| T63 | Conferir vídeo pronto com rotina pública pausada | Link para iniciar a operação; nenhum envio ao clicar apenas na navegação. |
+| T64 | Solicitar envio imediato no modo normal autorizado | Pedido persistido para aquele vídeo e canal; estado solicitado até a confirmação pública. |
+| T65 | Clicar de novo ou reabrir durante o pedido | Mesmo pedido e mesmo upload, sem duplicar publicação. |
+| T66 | Conferir tela de 390 px | Explicação, estado e botão legíveis, com foco visível. |
+
+T64 tem efeito real e só deve ser executado em um canal autorizado para publicação pública. A suíte usa respostas simuladas para testar visibilidade, identificação comercial, expiração, troca de canal, roteiro alterado e perda da resposta. Não provoque falhas de rede em um upload real. Se a API não confirmar visibilidade pública, confira o vídeo no YouTube Studio; o aplicativo não trata a ausência de confirmação como sucesso.
+
+Retornos antigos de autorização Google não devem marcar um canal já conectado como expirado. “Verificar acesso ao YouTube” consulta o acesso real, sem publicar nem desconectar a conta.

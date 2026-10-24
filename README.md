@@ -8,7 +8,7 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.12.0-beta. A criação local e o primeiro envio privado em canal real foram validados: o YouTube confirmou processamento, privacidade e propriedade do canal. Publicação pública de ofertas comerciais e vendas continuam pendentes de validação com produtos autorizados. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.13.0-beta. A criação local e o primeiro envio privado em canal real foram validados: o YouTube confirmou processamento, privacidade e propriedade do canal. Publicação pública de ofertas comerciais e vendas continuam pendentes de validação com produtos autorizados. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -56,6 +56,10 @@ Existe um único teste persistido por instalação: novos cliques não geram out
 Para esse teste, a única conta necessária é a sua conta Google com canal YouTube, API habilitada e credencial OAuth de aplicativo para computador. O login, a confirmação de identidade e o consentimento do titular precisam ser concluídos pelo próprio usuário no Google; não envie senha ou código ao suporte. Afiliar produtos vem depois de confirmar o fluxo técnico. O envio em uma conta real só está validado quando houver o resultado confirmado no seu painel.
 
 ### Ativar ofertas comerciais
+
+Para o primeiro envio comercial no mesmo dia, conclua as etapas abaixo e aguarde o vídeo automático ficar pronto. Na **Fila de revisão**, assista e clique **Publicar agora no YouTube**. O pedido vale para aquele roteiro e canal; mantém as demais reservas. O programa verifica o MP4, fonte, autorização e identificação comercial antes de pedir visibilidade pública. Só registra publicação depois de uma leitura da API confirmá-la. O botão não transforma o teste privado em oferta comercial e não funciona no modo tester.
+
+O pedido imediato é persistido por até 30 minutos. Se houver resposta incerta ao mudar a visibilidade, o sistema consulta o mesmo vídeo, sem abrir outro upload. Se o YouTube continuar informando privado, a publicação não é considerada concluída. Confira o Studio e eventuais restrições do projeto. Para um vídeo já enviado com falha, vincule o vídeo privado existente antes de fazer um novo pedido. Um pedido expirado sem qualquer sessão externa pode ser renovado pelo botão, após nova conferência das verificações.
 
 1. Crie sua conta num programa de afiliados, obtenha aprovação e gere ao menos um link de afiliado seu. O painel tem acesso ao programa da Hotmart; links físicos e digitais de outras plataformas também podem ser cadastrados.
 2. Em **Começar e acompanhar**, adicione o produto, as características verificadas e uma foto autorizada opcional. Clique **Autorizar** para permitir o uso desses dados nas variações automáticas.

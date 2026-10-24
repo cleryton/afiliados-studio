@@ -68,7 +68,7 @@ def state():
         if stage=='scheduled':
             label='Agendamento confirmado no YouTube';detail='O destino confirmou o agendamento. Confira alterações ou cancelamentos no YouTube Studio.';kind='remote'
         elif stage:
-            label={'held_local':'Envio retido localmente','uncertain':'Envio sem confirmação','failed':'Envio exige atenção','uploaded':'Enviado com visibilidade restrita','held':'Publicação retida no YouTube'}.get(stage,'Envio em andamento no YouTube')
+            label={'held_local':'Envio retido localmente','uncertain':'Envio sem confirmação','failed':'Envio exige atenção','uploaded':'Enviado com visibilidade restrita','held':'Publicação retida no YouTube','publishing':'Aguardando confirmação pública'}.get(stage,'Envio em andamento no YouTube')
             detail=row['remote_error'] or 'Publicação pública ainda não confirmada.';kind='attention' if stage in ('held_local','held','uncertain','failed') else 'sending'
         elif row['buffer_id'] or auto and row['delivery']!='local':
             label='Acompanhamento pelo Buffer';detail='Confira o rascunho ou a publicação no destino. Esta data não confirma um agendamento remoto.';kind='attention'

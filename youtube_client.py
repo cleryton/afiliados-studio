@@ -19,6 +19,7 @@ SCOPES='https://www.googleapis.com/auth/youtube.force-ssl'
 _pending={}
 _lock=threading.Lock()
 _token_lock=threading.RLock()
+_delivery_lock=threading.RLock()
 
 
 def secret_path(name):return core.DATA/('youtube-'+name+'.secret')
@@ -43,6 +44,8 @@ def init():
     insights.init()
     import channel_probe
     channel_probe.init()
+    import publication
+    publication.init()
 
 
 def settings():
@@ -229,8 +232,12 @@ def update_job(jid,**values):
 
 
 def process(job,product):
+    with _delivery_lock:return _process(job,product)
+
+
+def _process(job,product):
     if core.TESTER:return
-    import autopilot,catalog,campaigns,quality
+    import autopilot,catalog,campaigns,quality,publication
     jid=job['id'];config=settings()
     with core.db() as c:
         current=c.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
@@ -240,6 +247,11 @@ def process(job,product):
         row=c.execute('SELECT * FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
     if row and row['stage'] in ('uncertain','failed','published'):return
     if row and row['next_check'] and datetime.fromisoformat(row['next_check'])>core.now():return
+    immediate=publication.get(jid)
+    if immediate and (immediate['channel_id']!=config['channel_id'] or immediate['content_hash']!=quality.content_hash(job) or publication.expired(immediate) and (not row or row['stage']!='publishing')):
+        with core.db() as c:c.execute('INSERT OR IGNORE INTO youtube_jobs(job_id,stage,updated_at) VALUES (?,?,?)',(jid,'failed',core.stamp()))
+        update_job(jid,stage='failed',error='Pedido imediato expirou, o roteiro mudou ou o canal foi trocado. Confira o YouTube Studio antes de uma nova ação.')
+        return
     file=core.DATA/'media'/jid/'video.mp4'
     try:
         if not row and not file.is_file():
@@ -273,7 +285,7 @@ def process(job,product):
                 with core.db() as c:c.execute('INSERT INTO youtube_jobs(job_id,stage,updated_at) VALUES (?,?,?)',(jid,'held_local',core.stamp()))
                 update_job(jid,error='Produto pausado ou catálogo vencido. O envio aguarda uma fonte autorizada atualizada.',next_check=(core.now()+timedelta(minutes=15)).isoformat())
                 return
-            if row and row['video_id'] and row['stage'] in ('processing','scheduled'):
+            if row and row['video_id'] and row['stage'] in ('processing','scheduled','publishing'):
                 api('videos?part=status',{'id':row['video_id'],'status':{'privacyStatus':'private','selfDeclaredMadeForKids':False}},'PUT')
                 update_job(jid,stage='held')
             raise ValueError('Produto pausado, catálogo vencido ou dados alterados. Publicação retida; confira o catálogo e o YouTube Studio.')
@@ -284,7 +296,7 @@ def process(job,product):
         review=quality.inspect(jid,verify_media=True)
         if not review['allowed']:
             if row:
-                if row['video_id'] and row['stage'] in ('processing','scheduled'):
+                if row['video_id'] and row['stage'] in ('processing','scheduled','publishing'):
                     api('videos?part=status',{'id':row['video_id'],'status':{'privacyStatus':'private','selfDeclaredMadeForKids':False}},'PUT')
                     update_job(jid,stage='held',error='Publicação retida pelas verificações editoriais. Confira a fila de revisão.')
                 else:update_job(jid,error='Envio aguardando verificações editoriais. Confira a fila de revisão.')
@@ -332,6 +344,13 @@ def process(job,product):
             autopilot.event('published','Publicação pública confirmada pelo YouTube.',jid)
             return
         if row['stage']=='processing':
+            if immediate:
+                target={'privacyStatus':'public','selfDeclaredMadeForKids':False,'containsSyntheticMedia':bool(job.get('voice'))}
+                # Commit before the external request: an uncertain response is
+                # followed by reads of the same video, never another upload.
+                update_job(jid,stage='publishing',error='Aguardando confirmação pública pelo YouTube.')
+                api('videos?part=status',{'id':video_id,'status':target},'PUT')
+                return
             if config['visibility']=='public':
                 due=datetime.fromisoformat(job['due_at'])
                 if due<core.now()+timedelta(minutes=5):
@@ -344,11 +363,17 @@ def process(job,product):
             update_job(jid,stage='scheduled' if config['visibility']=='public' else 'uploaded',error='')
             autopilot.event('youtube','Vídeo enviado ao YouTube com publicidade identificada. '+('Publicação agendada.' if config['visibility']=='public' else 'Visibilidade definida na configuração.'),jid)
             return
+        if row['stage']=='publishing':
+            update_job(jid,stage='failed' if not immediate or publication.expired(immediate) else 'publishing',
+                       error='YouTube ainda não confirmou visibilidade pública. Confira restrições no YouTube Studio.',
+                       next_check=(core.now()+timedelta(minutes=1)).isoformat())
+            return
         update_job(jid,error='')
     except Exception as error:
         if not row:
             with core.db() as c:c.execute('INSERT OR IGNORE INTO youtube_jobs(job_id,stage,updated_at) VALUES (?,?,?)',(jid,'failed',core.stamp()))
-        update_job(jid,error=str(error)[:600],next_check=(core.now()+timedelta(minutes=15)).isoformat())
+        with core.db() as c:latest=c.execute('SELECT stage FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
+        update_job(jid,error=str(error)[:600],next_check=(core.now()+timedelta(minutes=1 if latest and latest['stage']=='publishing' else 15)).isoformat())
 
 
 def tick():
@@ -402,10 +427,11 @@ def reconcile(jid,video_id):
         row=c.execute('SELECT stage FROM youtube_jobs WHERE job_id=?',(jid,)).fetchone()
         if not row or row['stage'] not in ('uncertain','failed','held'):raise ValueError('Este envio não precisa de reconciliação.')
         c.execute("UPDATE youtube_jobs SET stage='processing',video_id=?,error='',next_check=NULL,updated_at=? WHERE job_id=?",(video_id,core.stamp(),jid))
+        c.execute('DELETE FROM immediate_publications WHERE job_id=?',(jid,))
 
 
 def state():
-    import insights,channel_probe
+    import insights,channel_probe,publication
     with core.db() as c:rows=[dict(r) for r in c.execute('SELECT * FROM youtube_jobs ORDER BY updated_at DESC')]
     return {'settings':settings(),'client_configured':secret_path('client').is_file(),'connected':secret_path('tokens').is_file() and bool(settings()['channel_id']),'jobs':rows,'metrics':insights.state(),'test':channel_probe.state(),
-            'notice':'Envio direto pela API oficial, com autorização inicial Google. Projetos e contas estão sujeitos a permissões, processamento e cotas do YouTube.'}
+            'immediate':publication.state(),'notice':'Envio direto pela API oficial, com autorização inicial Google. Projetos e contas estão sujeitos a permissões, processamento e cotas do YouTube.'}

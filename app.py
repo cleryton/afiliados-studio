@@ -111,7 +111,11 @@ class Handler(BaseHTTPRequestHandler):
                     youtube_client.complete(query.get('state',[''])[0],query.get('code',[''])[0])
                     youtube_client.put({'last_error':''})
                 except (ValueError,OSError) as error:
-                    youtube_client.put({'last_error':str(error)[:500]})
+                    # A replay of an old callback must not overwrite a working
+                    # account's status. Real access is checked separately.
+                    account=youtube_client.settings()
+                    if not account['channel_verified'] or not youtube_client.secret_path('tokens').is_file():
+                        youtube_client.put({'last_error':str(error)[:500]})
                 self.send_response(303);self.security_headers()
                 self.send_header('Location','/#start');self.send_header('Content-Length','0');self.end_headers();return
             if path=='/favicon.ico':
@@ -255,6 +259,10 @@ class Handler(BaseHTTPRequestHandler):
                 youtube_client.disconnect();return self.respond(200,{'ok':True})
             if path=='/api/youtube/settings':
                 youtube_client.configure(payload);return self.respond(200,{'ok':True})
+            immediate_match=re.fullmatch(r'/api/youtube/publish-now/([a-f0-9]{32})',path)
+            if immediate_match:
+                import publication
+                return self.respond(200,publication.request_now(immediate_match[1]))
             yt_match=re.fullmatch(r'/api/youtube/reconcile/([a-f0-9]{32})',path)
             if yt_match:
                 youtube_client.reconcile(yt_match[1],payload.get('video_id'));return self.respond(200,{'ok':True})

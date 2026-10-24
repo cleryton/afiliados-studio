@@ -280,5 +280,108 @@ class DeliveryTests(unittest.TestCase):
         self.assertIsNone(self.row(job['id']))
         self.assertEqual(core.get_job(job['id'])['status'],'queued')
 
+    def immediate(self):
+        import publication
+        job,product=self.ready()
+        yt.save_secret('tokens',{'access_token':'fixture-local-only'})
+        publication.request_now(job['id'])
+        return job,product
+
+    def test_immediate_request_is_persistent_idempotent_and_keeps_reserved_time(self):
+        import publication
+        job,product=self.immediate()
+        self.assertTrue(publication.request_now(job['id'])['already_requested'])
+        self.assertEqual(core.get_job(job['id'])['due_at'],job['due_at'])
+        self.assertEqual(len(publication.state()),1)
+        yt.init()
+        self.assertIsNotNone(publication.get(job['id']))
+
+    def test_immediate_publication_uses_existing_video_and_waits_for_real_confirmation(self):
+        job,product=self.immediate();self.remote(job['id'])
+        with patch.object(yt,'api',side_effect=[{'items':[self.video()]},{}]) as api,patch.object(yt,'initialize_upload') as upload:
+            yt.process(job,product)
+        upload.assert_not_called()
+        target=api.call_args.args[1]['status']
+        self.assertEqual(target['privacyStatus'],'public');self.assertNotIn('publishAt',target)
+        self.assertEqual(self.row(job['id'])['stage'],'publishing')
+        self.assertEqual(core.get_job(job['id'])['status'],'ready')
+        with patch.object(yt,'api',return_value={'items':[self.video(privacy='public')]}) as api:yt.process(job,product)
+        self.assertEqual(api.call_count,1)
+        self.assertEqual(core.get_job(job['id'])['status'],'published')
+
+    def test_immediate_timeout_reads_same_video_without_repeating_visibility_or_upload(self):
+        job,product=self.immediate();self.remote(job['id'])
+        with patch.object(yt,'api',side_effect=[{'items':[self.video()]},TimeoutError('fixture timeout')]):yt.process(job,product)
+        self.assertEqual(self.row(job['id'])['stage'],'publishing')
+        with core.db() as c:c.execute('UPDATE youtube_jobs SET next_check=NULL WHERE job_id=?',(job['id'],))
+        with patch.object(yt,'api',return_value={'items':[self.video()]}) as api,patch.object(yt,'initialize_upload') as upload:
+            yt.process(job,product)
+        self.assertEqual(api.call_count,1);upload.assert_not_called()
+        self.assertEqual(core.get_job(job['id'])['status'],'ready')
+
+    def test_immediate_request_cannot_bypass_pause_rights_review_or_tester(self):
+        import publication
+        job,product=self.ready();yt.save_secret('tokens',{'access_token':'fixture'})
+        with patch.object(core,'TESTER',True):
+            with self.assertRaisesRegex(ValueError,'tester'):publication.request_now(job['id'])
+        autopilot.put_settings({'enabled':False})
+        with self.assertRaisesRegex(ValueError,'operação pública'):publication.request_now(job['id'])
+        autopilot.put_settings({'enabled':True})
+        with patch('quality.inspect',return_value={'allowed':False}):
+            with self.assertRaisesRegex(ValueError,'verificações'):publication.request_now(job['id'])
+        with core.db() as c:c.execute('UPDATE jobs SET rights=0 WHERE id=?',(job['id'],))
+        with self.assertRaisesRegex(ValueError,'autorizados'):publication.request_now(job['id'])
+        self.assertIsNone(publication.get(job['id']))
+
+    def test_immediate_request_rejects_scheduled_or_uncertain_remote_delivery(self):
+        import publication
+        job,product=self.ready();yt.save_secret('tokens',{'access_token':'fixture'})
+        self.remote(job['id'],'scheduled')
+        with self.assertRaises(ValueError):publication.request_now(job['id'])
+        with core.db() as c:c.execute("UPDATE youtube_jobs SET stage='uncertain' WHERE job_id=?",(job['id'],))
+        with self.assertRaises(ValueError):publication.request_now(job['id'])
+        self.assertIsNone(publication.get(job['id']))
+
+    def test_immediate_expiry_stops_without_new_upload(self):
+        job,product=self.immediate()
+        with core.db() as c:c.execute('UPDATE immediate_publications SET requested_at=? WHERE job_id=?',((core.now()-timedelta(minutes=31)).isoformat(),job['id']))
+        with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+        upload.assert_not_called();self.assertEqual(self.row(job['id'])['stage'],'failed')
+
+    def test_immediate_request_bound_to_channel_and_script(self):
+        job,product=self.immediate()
+        yt.put({'channel_id':'another-channel'})
+        with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+        upload.assert_not_called();self.assertEqual(self.row(job['id'])['stage'],'failed')
+        yt.put({'channel_id':'UC-test'})
+        with core.db() as c:
+            c.execute('DELETE FROM youtube_jobs WHERE job_id=?',(job['id'],))
+            c.execute("UPDATE jobs SET caption=caption||' changed' WHERE id=?",(job['id'],))
+        with patch.object(yt,'initialize_upload') as upload:yt.process(job,product)
+        upload.assert_not_called();self.assertEqual(self.row(job['id'])['stage'],'failed')
+
+    def test_immediate_disclosure_is_verified_before_public_request(self):
+        job,product=self.immediate();self.remote(job['id'])
+        with patch.object(yt,'api',side_effect=[{'items':[self.video(paid=False)]},{}]) as api:yt.process(job,product)
+        self.assertIn('paidProductPlacementDetails',api.call_args.args[1])
+        self.assertEqual(self.row(job['id'])['stage'],'processing')
+        self.assertEqual(core.get_job(job['id'])['status'],'ready')
+
+    def test_expired_immediate_can_be_renewed_only_without_any_remote_attempt(self):
+        import publication
+        job,product=self.immediate()
+        with core.db() as c:c.execute('UPDATE immediate_publications SET requested_at=? WHERE job_id=?',((core.now()-timedelta(minutes=31)).isoformat(),job['id']))
+        self.assertFalse(publication.request_now(job['id'])['already_requested'])
+        self.remote(job['id'],'publishing')
+        with core.db() as c:c.execute('UPDATE immediate_publications SET requested_at=? WHERE job_id=?',((core.now()-timedelta(minutes=31)).isoformat(),job['id']))
+        with self.assertRaisesRegex(ValueError,'vídeo privado existente'):publication.request_now(job['id'])
+
+    def test_reconciling_known_private_video_clears_old_immediate_intent(self):
+        import publication
+        job,product=self.immediate();self.remote(job['id'],'failed')
+        with patch.object(yt,'api',return_value={'items':[self.video()]}):yt.reconcile(job['id'],'abc12345678')
+        self.assertIsNone(publication.get(job['id']))
+        self.assertFalse(publication.request_now(job['id'])['already_requested'])
+
 
 if __name__=='__main__':unittest.main()

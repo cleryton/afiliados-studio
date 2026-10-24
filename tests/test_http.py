@@ -78,6 +78,29 @@ class HTTPTests(unittest.TestCase):
         self.assertFalse(autopilot.settings()['enabled'])
         self.assertFalse(youtube_client.settings()['enabled'])
 
+    def test_immediate_endpoint_requires_csrf_and_blocks_tester(self):
+        import publication
+        path='/api/youtube/publish-now/'+'a'*32
+        self.assertEqual(self.request(path,{})[0],403)
+        with patch.object(core,'TESTER',True):self.assertEqual(self.request(path,{}, {'X-Studio-Token':app.TOKEN})[0],400)
+        with patch.object(publication,'request_now',return_value={'requested':True}) as request:
+            self.assertEqual(self.request(path,{}, {'X-Studio-Token':app.TOKEN})[0],200)
+        request.assert_called_once_with('a'*32)
+
+    def test_replayed_callback_does_not_mark_connected_channel_as_expired(self):
+        client=youtube_client.secret_path('tokens');old=client.read_bytes() if client.exists() else None
+        config=youtube_client.settings()
+        try:
+            client.write_bytes(b'fixture-never-read');youtube_client.put({'channel_verified':True,'last_error':''})
+            with patch.object(youtube_client,'complete',side_effect=ValueError('fixture expired callback')):
+                self.request('/oauth/youtube/callback?state=fixture&code=fixture')
+            self.assertEqual(youtube_client.settings()['last_error'],'')
+            self.assertTrue(youtube_client.settings()['channel_verified'])
+        finally:
+            youtube_client.put(config)
+            if old is None:client.unlink(missing_ok=True)
+            else:client.write_bytes(old)
+
     def test_expired_session_is_identified_before_any_mutation(self):
         with patch.object(content_engine,'configure') as configure:
             status,_,body=self.request('/api/content/settings',{'mode':'rules'},{'X-Studio-Token':'old-session'})

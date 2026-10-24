@@ -24,8 +24,20 @@ function reviewCard(j){
  ${q.manual_required?'<p class="review-explanation">Esta campanha exige sua aprovação por vídeo antes do envio.</p>':''}
  ${q.decision?`<p class="review-explanation">${q.decision.decision==='approved'?'Aprovado':'Ajustes solicitados'} em ${date(q.decision.reviewed_at)}${q.decision.note?': '+esc(q.decision.note):'.'}</p>`:''}
  ${q.warnings.length?`<p class="state-note">${q.warnings.map(esc).join(' ')}</p>`:''}
- ${buffer&&locked?'<p class="review-explanation">Existe tentativa de envio externo. Confira o destino antes de alterar o conteúdo.</p>':''}${remote?`<p class="review-explanation">Envio YouTube: ${esc(({initializing:'iniciando',uploading:'enviando',processing:'processando',scheduled:'agendado',published:'público confirmado',held:'retido',held_local:'aguardando produto',uncertain:'conferir no Studio',failed:'falhou',uploaded:'visibilidade configurada'})[remote.stage]||remote.stage)}.${remote.error?' '+esc(remote.error):''} ${remote.video_id?'<a class="small-link" href="https://studio.youtube.com/" target="_blank" rel="noopener noreferrer">Abrir YouTube Studio ↗</a>':''}</p>`:''}
- <div class="review-actions"><button class="button subtle" data-action="open-job" data-id="${j.id}">Abrir roteiro</button>${isReady?`<button class="button subtle" data-action="validate-media" data-id="${j.id}">Verificar arquivo</button>${!locked?`<button class="button ${q.status==='review'?'primary':'subtle'}" data-action="review-approve" data-id="${j.id}" ${q.checks.every(c=>c.passed)&&q.decision?.decision!=='approved'?'':'disabled'}>${q.decision?.decision==='approved'?'Vídeo aprovado':'Aprovar vídeo'}</button><button class="button subtle" data-action="review-reject" data-id="${j.id}">Solicitar ajustes</button>`:''}<a class="button subtle" href="${esc(j.video_url)}" download="video-${j.id.slice(0,6)}.mp4">Baixar MP4 ↓</a>`:''}${!locked&&['draft','ready','error','scheduled'].includes(j.status)?`<button class="text-button" data-action="regenerate-script" data-id="${j.id}">Recriar roteiro com a campanha atual</button><small class="field-help">Substitui a edição atual e exige gerar um novo MP4.</small>`:''}</div></div></article>`;
+ ${buffer&&locked?'<p class="review-explanation">Existe tentativa de envio externo. Confira o destino antes de alterar o conteúdo.</p>':''}${remote?`<p class="review-explanation">Envio YouTube: ${esc(({initializing:'iniciando',uploading:'enviando',processing:'processando',publishing:'aguardando confirmação pública',scheduled:'agendado',published:'público confirmado',held:'retido',held_local:'aguardando produto',uncertain:'conferir no Studio',failed:'falhou',uploaded:'visibilidade configurada'})[remote.stage]||remote.stage)}.${remote.error?' '+esc(remote.error):''} ${remote.video_id?'<a class="small-link" href="https://studio.youtube.com/" target="_blank" rel="noopener noreferrer">Abrir YouTube Studio ↗</a>':''}</p>`:''}
+ ${immediatePublication(j,remote)}<div class="review-actions"><button class="button subtle" data-action="open-job" data-id="${j.id}">Abrir roteiro</button>${isReady?`<button class="button subtle" data-action="validate-media" data-id="${j.id}">Verificar arquivo</button>${!locked?`<button class="button ${q.status==='review'?'primary':'subtle'}" data-action="review-approve" data-id="${j.id}" ${q.checks.every(c=>c.passed)&&q.decision?.decision!=='approved'?'':'disabled'}>${q.decision?.decision==='approved'?'Vídeo aprovado':'Aprovar vídeo'}</button><button class="button subtle" data-action="review-reject" data-id="${j.id}">Solicitar ajustes</button>`:''}<a class="button subtle" href="${esc(j.video_url)}" download="video-${j.id.slice(0,6)}.mp4">Baixar MP4 ↓</a>`:''}${!locked&&['draft','ready','error','scheduled'].includes(j.status)?`<button class="text-button" data-action="regenerate-script" data-id="${j.id}">Recriar roteiro com a campanha atual</button><small class="field-help">Substitui a edição atual e exige gerar um novo MP4.</small>`:''}</div></div></article>`;
+}
+
+function immediatePublication(j,remote){
+ const automatic=data.automation?.runs.some(r=>r.job_id===j.id);
+ if(j.status!=='ready'||!automatic)return '';
+ if(data.mode?.tester)return '<p class="review-explanation">Modo tester: publicação externa bloqueada.</p>';
+ const requested=data.youtube?.immediate?.some(r=>r.job_id===j.id);
+ if(requested)return '<p class="inline-note" role="status">Publicação imediata solicitada. Aguarde a confirmação pública do YouTube; acompanhe o estado do envio acima.</p>';
+ if(!j.quality.allowed)return '<p class="review-explanation">Resolva as verificações antes de publicar este vídeo.</p>';
+ if(!data.youtube?.connected||!data.youtube?.settings.enabled||!data.automation?.settings.enabled||data.youtube?.settings.visibility!=='public')return '<p class="review-explanation">Para publicar agora, conecte o canal e <a class="small-link" href="#start">inicie a operação pública</a>.</p>';
+ if(remote&&!['uploading','processing'].includes(remote.stage))return '';
+ return `<div class="toolbar"><button class="button primary" data-action="publish-now" data-id="${j.id}">Publicar agora no YouTube</button></div><p class="field-help">Este vídeo ficará público após processamento e confirmação do YouTube, sem esperar o horário reservado. Os demais vídeos mantêm a agenda.</p>`;
 }
 function campaignDialog(id){
  const c=(data.campaigns||[]).find(c=>c.id===id),dialog=$('#campaign-dialog');
@@ -37,9 +49,10 @@ document.addEventListener('click',async e=>{
  const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action,id=b.dataset.id;
  if(action==='new-campaign'||action==='edit-campaign'){campaignDialog(id);return;}
  if(action==='review-filter'){reviewFilter=b.dataset.filter;renderPage();return;}
- if(!['validate-media','review-approve','review-reject','regenerate-script'].includes(action))return;
+ if(!['validate-media','review-approve','review-reject','regenerate-script','publish-now'].includes(action))return;
  await busy(b,async()=>{const original=b.textContent;try{
   b.textContent=action==='validate-media'?'Verificando MP4…':'Aplicando…';
+  if(action==='publish-now'){await api(`/api/youtube/publish-now/${id}`,{});await refresh();toast('Publicação imediata solicitada. Aguarde a confirmação do YouTube.');return;}
   if(action==='validate-media')await api(`/api/quality/${id}/validate`,{});
   else if(action==='regenerate-script'){await api(`/api/quality/${id}/regenerate`,{});await refresh();openJob(id);toast('Roteiro recriado. A edição anterior foi substituída; revise e gere o MP4.');return;}
   else await api(`/api/quality/${id}/review`,{decision:action==='review-approve'?'approved':'rejected',note:''});
