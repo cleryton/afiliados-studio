@@ -77,13 +77,20 @@ def credentials(document):
     save_secret('client',{'client_id':cid,'client_secret':secret})
 
 
-def begin(port):
+def begin(port,run_private_test=False):
     if core.TESTER:raise ValueError('Conexão Google desabilitada no modo tester. Use o modo normal para testar uma conta real.')
+    if run_private_test:
+        import channel_probe
+        item=channel_probe.row()
+        if not item or item['stage']!='ready_local':raise ValueError('Prepare o vídeo de teste antes de conectar e testar em privado.')
     client=read_secret('client')
     state=secrets.token_urlsafe(32);verifier=secrets.token_urlsafe(48)
     challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')
     redirect=f'http://127.0.0.1:{port}/oauth/youtube/callback'
-    with _lock:_pending.clear();_pending.update(state=state,verifier=verifier,redirect=redirect,expires=time.monotonic()+600)
+    with _lock:
+        pending={'state':state,'verifier':verifier,'redirect':redirect,'expires_at':time.time()+600,'run_private_test':run_private_test is True}
+        save_secret('oauth-pending',pending)
+        _pending.clear();_pending.update(pending,expires=time.monotonic()+600)
     return 'https://accounts.google.com/o/oauth2/v2/auth?'+urlencode({'client_id':client['client_id'],'redirect_uri':redirect,'response_type':'code','scope':SCOPES,'access_type':'offline','prompt':'consent','state':state,'code_challenge':challenge,'code_challenge_method':'S256'})
 
 
@@ -96,9 +103,17 @@ def token_request(values):
 
 def complete(state,code):
     with _lock:
-        if not _pending or time.monotonic()>_pending['expires'] or not secrets.compare_digest(state,_pending['state']):
+        if not _pending:
+            try:
+                saved=read_secret('oauth-pending')
+                valid=(isinstance(saved,dict) and all(isinstance(saved.get(k),str) and saved[k] for k in ('state','verifier','redirect'))
+                       and type(saved.get('expires_at')) in (int,float) and 0<saved['expires_at']-time.time()<=600)
+                if valid:_pending.update(saved,expires=time.monotonic()+saved['expires_at']-time.time())
+            except (OSError,ValueError,TypeError):pass
+        if not _pending or time.monotonic()>_pending['expires'] or time.time()>_pending['expires_at'] or not secrets.compare_digest(state,_pending['state']):
             raise ValueError('Autorização inválida ou expirada. Inicie a conexão novamente pelo painel.')
         pending=dict(_pending);_pending.clear()
+        secret_path('oauth-pending').unlink(missing_ok=True)
     client=read_secret('client')
     result=token_request({**client,'code':code,'code_verifier':pending['verifier'],'grant_type':'authorization_code','redirect_uri':pending['redirect']})
     if not result.get('access_token') or not result.get('refresh_token'):raise ValueError('A autorização não forneceu acesso persistente. Reconecte concedendo acesso ao canal.')
@@ -112,6 +127,10 @@ def complete(state,code):
         put({'channel_id':channel['id'],'channel_name':channel['snippet']['title'],'last_error':'','last_verified_at':core.stamp(),'channel_verified':True})
     except Exception:
         secret_path('tokens').unlink(missing_ok=True);raise
+    if pending.get('run_private_test'):
+        import channel_probe
+        try:channel_probe.start()
+        except (OSError,ValueError):raise ValueError('Canal conectado. O teste privado precisa ser retomado no painel; confira a prévia e o estado do vídeo.') from None
 
 
 def access_token():
@@ -352,10 +371,12 @@ def tick():
 
 
 def disconnect():
+    with _lock:
+        _pending.clear()
+        secret_path('oauth-pending').unlink(missing_ok=True)
     put({'enabled':False,'channel_id':'','channel_name':'','channel_verified':False,'last_verified_at':None})
     secret_path('tokens').unlink(missing_ok=True)
     with core.db() as c:c.execute('DELETE FROM youtube_metrics')
-    with _lock:_pending.clear()
 
 
 def verify_channel():

@@ -12,14 +12,19 @@ NORMAL_EXITS = {0, 2, 3, 4, 130, -1073741510, 3221225786}
 RESTART_DELAYS = (5, 15, 30, 60, 120)
 
 
-def supervise(arguments):
+def supervise(arguments,log_path=None):
     failures = 0
     first = True
     while True:
         args = arguments if first else [a for a in arguments if a != '--open']
         first = False
         started = time.monotonic()
-        child = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), *args], cwd=ROOT)
+        options={}
+        if log_path:
+            options={'stdin':subprocess.DEVNULL,'stdout':subprocess.DEVNULL,'stderr':subprocess.DEVNULL,
+                     'creationflags':getattr(subprocess,'CREATE_NO_WINDOW',0),
+                     'env':{**os.environ,'AFILIADOS_BACKGROUND':'1','PYTHONUTF8':'1'}}
+        child = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), *args], cwd=ROOT,**options)
         try:
             code = child.wait()
         except KeyboardInterrupt:
@@ -50,11 +55,12 @@ def main():
     parser.add_argument('--tester', action='store_true')
     parser.add_argument('--open', action='store_true')
     parser.add_argument('--port', type=int)
+    parser.add_argument('--background',action='store_true')
     args = parser.parse_args()
     data = ROOT / 'data-tester' if args.tester else Path(os.environ.get('AFILIADOS_DATA', ROOT / 'data')).resolve()
     try:
         with InstanceLock(data / 'launcher'):
-            return supervise(sys.argv[1:])
+            return supervise([a for a in sys.argv[1:] if a!='--background'],data/'background.log' if args.background else None)
     except ValueError as error:
         print(str(error), flush=True)
         return 3

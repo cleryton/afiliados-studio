@@ -204,7 +204,7 @@ Use somente produtos de demonstração no modo tester. A rotina precisa estar at
 
 A suíte automatizada cobre falta de espaço, MP4 ausente, duas criações simultâneas, pausa durante criação e troca de fonte durante consulta. A recuperação de um arquivo ausente mantém o roteiro atual, mas exige nova revisão se a campanha assim determinar. Falhas temporárias do catálogo aguardam 5, 15, 30, 60, 120 e até 240 minutos; erro de arquivo ou acesso recusado aguarda quatro horas. Não é preciso desligar a internet nem esperar horas para validar esses casos: os testes usam respostas controladas e relógio simulado.
 
-No notebook, três gerações reais também podem ser conferidas em uma instalação isolada: produção inicial, atualização da fonte e reposição de arquivo local ausente. Nenhuma delas comprova publicação ou venda. O programa precisa continuar aberto; não é instalado um serviço de inicialização do Windows.
+No notebook, três gerações reais também podem ser conferidas em uma instalação isolada: produção inicial, atualização da fonte e reposição de arquivo local ausente. Nenhuma delas comprova publicação ou venda. O programa precisa continuar executando; consulte a seção 19 para o início com Windows da versão 0.12.
 
 ## 15. Agenda e retomada após ficar offline (0.8)
 
@@ -251,7 +251,7 @@ Abra **iniciar_tester.bat** e mantenha a janela do programa aberta. Em **Começa
 
 A suíte automatizada cobre queda de um processo filho real e retomada, limite de cinco reinícios, Ctrl+C, falhas temporárias, ciclo demorado, sete cópias, falta de espaço e cópia durante uma transação ainda não confirmada. Não mate processos reais, não provoque corrupção nem encha o disco para conferir esses casos. Modo tester continua sem publicação e sem consultas externas de fotos ou métricas.
 
-Cópias incluem links e dados privados. Não anexe o banco ou a pasta backups a Issues. Elas não incluem as credenciais separadas nem os vídeos. Restauração exige auxílio de desenvolvimento e conferência das publicações no destino; o aplicativo não restaura automaticamente. O supervisor só funciona quando se abre pelos arquivos iniciar e a janela permanece aberta; não foi instalado início com o Windows.
+Cópias incluem links e dados privados. Não anexe o banco ou a pasta backups a Issues. Elas não incluem as credenciais separadas nem os vídeos. Restauração exige auxílio de desenvolvimento e conferência das publicações no destino; o aplicativo não restaura automaticamente. O modo tester continua em janela. O modo normal 0.12 também oferece execução em segundo plano e início com Windows, descritos na seção 19.
 
 ## 18. Validar o fluxo antes de obter afiliação (0.11)
 
@@ -268,3 +268,24 @@ Em **Começar → Teste completo antes da afiliação**, crie o vídeo de teste 
 Em validação posterior **no modo normal**, o titular deve entrar no Google, configurar a credencial OAuth e autorizar o canal. Clique **Autorizar envio privado e iniciar**. Acompanhe preparação, envio e processamento; abrir a página do vídeo antes do processamento não representa teste concluído. Só aceite o resultado quando o painel confirmar que a API respondeu com vídeo processado, privado e pertencente ao canal esperado. Confira a visibilidade no YouTube Studio. Esse resultado não comprova postagem pública ou afiliação.
 
 Não compartilhe senha, código de confirmação ou JSON OAuth. O teste tem pausa própria; uma requisição em andamento pode terminar como privada. Se aparecer envio incerto, confira o destino antes de qualquer intervenção. A suíte cobre troca de canal, arquivo alterado, falha de rede, retomada, resposta incerta e ausência de contas usando respostas simuladas; esses testes não substituem a primeira autorização e o envio em canal real.
+
+## 19. Execução em segundo plano e início com Windows (0.12)
+
+O modo normal aberto por **iniciar.bat** passa a funcionar sem uma janela de terminal aberta. Fechar o navegador não encerra a execução. **parar.bat** pede encerramento ao aplicativo local. Para investigar uma falha de abertura, use **iniciar_console.bat**. O modo tester continua separado e em janela, com publicações bloqueadas.
+
+| ID | Ação | Resultado esperado |
+| --- | --- | --- |
+| T56 | Abrir iniciar.bat duas vezes | Uma instância saudável reaproveitada, com dados preservados. |
+| T57 | Fechar a página e abrir novamente | Programa continua respondendo e mantém a fila. |
+| T58 | Executar parar.bat | Encerramento normal, sem reinício pelo supervisor; outros aplicativos Python não são encerrados. |
+| T59 | Executar ativar_inicio_windows.bat | Entrada de início automático do usuário atual configurada para esta instalação. Confira no checklist; não reinicie o Windows durante trabalhos reais. |
+| T60 | Executar desativar_inicio_windows.bat | Somente a entrada desta instalação é retirada. A execução atual continua até usar parar.bat. |
+| T61 | Abrir teste privado pronto, com credencial importada e sem canal conectado | Botão Conectar e testar em privado explica o único envio privado após consentimento. |
+
+T59 e T60 alteram uma configuração real da conta Windows. Execute somente se deseja esse comportamento nesta instalação; não são obrigatórios para testar a criação de vídeos. A suíte automatizada usa um registro simulado para conferir instalação, retirada e preservação de outra instalação.
+
+Os logs locais são limitados a dois arquivos de até 2 MB em data. Eles são privados e não fazem parte do diagnóstico para compartilhar. A suíte também verifica a rotação com um processo filho real.
+
+Uma autorização Google pendente pode continuar após reiniciar o aplicativo dentro de dez minutos, com o pedido protegido pelo Windows. Ela só é consumida uma vez; uma tentativa nova substitui a anterior. Não é necessário provocar falha durante um consentimento real: estado incorreto, expiração, troca de tentativa e retomada são testados com respostas controladas.
+
+**Conectar e testar em privado** pede somente o envio do clipe demonstrativo já pronto. Não ativa a rotina pública nem cria ofertas comerciais. Conectar pela etapa 02 continua disponível sem iniciar teste. Login, revisão das permissões e consentimento do canal são realizados pelo titular no navegador padrão.

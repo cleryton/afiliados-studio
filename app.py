@@ -119,6 +119,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.security_headers()
                 self.end_headers()
                 return
+            if path=='/api/health':
+                import background
+                return self.respond(200,{'app':'AfiliadosStudio','version':VERSION,'tester':core.TESTER,'data_id':background.installation_id()})
             if path == '/api/state':
                 import content_engine
                 return self.respond(200, {**core.state(), 'token': TOKEN, 'automation':autopilot.state(),'campaigns':campaigns.state(),'content':content_engine.state(),'catalog':catalog.state(),'youtube':youtube_client.state(),'setup':readiness(),'operation':diagnostics.state(),'mode':{'tester':core.TESTER,'version':VERSION,'publishing_allowed':not core.TESTER}})
@@ -200,6 +203,11 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(payload, dict):
                 raise ValueError('Dados inválidos.')
             path = urlparse(self.path).path
+            if path=='/api/system/exit':
+                self.respond(200,{'ok':True})
+                STOP.set()
+                threading.Thread(target=self.server.shutdown,daemon=True).start()
+                return
             external={'/api/setup/start','/api/youtube/credentials','/api/youtube/connect','/api/youtube/verify','/api/youtube/settings','/api/youtube/test/start','/api/automation/connect','/api/automation/install'}
             if core.TESTER and path in external:
                 raise ValueError('O modo tester bloqueia contas e envios externos. Use a demonstração local; a publicação real exige iniciar.bat.')
@@ -237,7 +245,12 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/youtube/credentials':
                 youtube_client.credentials(payload.get('document'));return self.respond(200,{'ok':True})
             if path=='/api/youtube/connect':
-                return self.respond(200,{'url':youtube_client.begin(self.server.server_port)})
+                url=youtube_client.begin(self.server.server_port,run_private_test=payload.get('run_private_test') is True)
+                opened=False
+                if payload.get('open_browser') is True:
+                    try:opened=bool(webbrowser.open(url,new=2))
+                    except webbrowser.Error:pass
+                return self.respond(200,{'url':url,'opened':opened})
             if path=='/api/youtube/disconnect':
                 youtube_client.disconnect();return self.respond(200,{'ok':True})
             if path=='/api/youtube/settings':
@@ -360,6 +373,9 @@ def main():
     from instance_lock import InstanceLock
     try:
         with InstanceLock(core.DATA):
+            if os.environ.get('AFILIADOS_BACKGROUND')=='1':
+                import background_output
+                background_output.install(core.DATA)
             serve(args)
     except ValueError as error:
         print(str(error),flush=True)

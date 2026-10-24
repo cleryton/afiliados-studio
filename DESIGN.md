@@ -1,5 +1,7 @@
 # Contrato de interface
 
+Continuidade 0.12: início normal executa em segundo plano e pode abrir ao entrar no Windows; mostrar essa condição sem afirmar conexão ou publicação. Teste privado pronto com credencial importada oferece Conectar e testar em privado, com explicação de que o consentimento Google inicia somente esse vídeo privado. Não ativar produção pública. Preservar conexão sem teste pelo botão da etapa 02, bloqueio no tester e estados de falha/retomada. Conferir em 1440x900 e 390x844.
+
 Importação Google: link direto ?setup=youtube#start deve abrir Começar e levar o foco ao seletor nativo do JSON na etapa 02, uma vez por carregamento. Sem abrir o seletor automaticamente, alterar configurações ou mover o foco de novo em atualizações periódicas. Exibir atalho perto do vídeo pronto sem canal conectado. Conferir foco visível e seletor acessível em desktop e celular; no tester, a conexão continua bloqueada.
 
 Operação 0.11: acrescentar em Começar um teste privado do canal, independente de conta de afiliado e de ativar a produção pública. Explicar criação local, espera por login, envio privado e confirmação do processamento como etapas distintas. Botão desabilitado até canal conectado, bloqueio no tester, pausa própria do teste, progresso persistido e link do vídeo apenas quando houver ID confirmado. Nenhum teste vira venda, publicação pública ou produto comercial. Conferir vazio, andamento, pausa, erro, envio incerto e sucesso em 1440x900 e 390x844; preservar componentes e navegação.

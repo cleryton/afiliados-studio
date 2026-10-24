@@ -2,8 +2,8 @@
 setlocal
 cd /d "%~dp0"
 if exist ".venv\Scripts\python.exe" (
-    ".venv\Scripts\python.exe" launcher.py --open
+    ".venv\Scripts\python.exe" background.py start --open
 ) else (
-    python launcher.py --open
+    python background.py start --open
 )
 if errorlevel 1 pause

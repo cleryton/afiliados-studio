@@ -8,7 +8,7 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.11.0-beta. A criação local foi validada com MP4 real; a integração YouTube foi implementada e testada com respostas simuladas. O primeiro envio em um canal real ainda precisa de validação com afiliação aprovada e canal autorizado. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** versão 0.12.0-beta. A criação local e o primeiro envio privado em canal real foram validados: o YouTube confirmou processamento, privacidade e propriedade do canal. Publicação pública de ofertas comerciais e vendas continuam pendentes de validação com produtos autorizados. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Entrega para testers
 
@@ -22,14 +22,14 @@ Dê dois cliques em `iniciar.bat` ou execute:
 
 ```powershell
 python -m pip install -r requirements.txt
-python app.py --open
+python background.py start --open
 ```
 
-Abra http://127.0.0.1:8765/#start. Mantenha o programa aberto e o notebook ligado, com internet. A rotina impede suspensão automática enquanto está ativa, sem modificar permanentemente o plano de energia. Fechar a tampa pode suspender o notebook conforme a configuração do Windows.
+Abra http://127.0.0.1:8765/#start. O início normal funciona em segundo plano: mantenha o notebook ligado e com internet. Fechar a página do painel não encerra o programa; use parar.bat para encerrar. A rotina impede suspensão automática enquanto está ativa, sem modificar permanentemente o plano de energia. Fechar a tampa pode suspender o notebook conforme a configuração do Windows.
 
 ## Continuidade sem acompanhamento (0.10)
 
-Abrir por **iniciar.bat** ou **iniciar_tester.bat** também inicia um supervisor visível. Se o processo do aplicativo cair inesperadamente, ele tenta reabrir até cinco vezes, após 5, 15, 30, 60 e 120 segundos. Depois de uma hora contínua, uma nova queda começa outra sequência. O navegador abre somente na primeira execução. Encerrar normalmente, usar Ctrl+C, já existir outra instância ou faltar configuração de instalação/porta não provoca reinícios. Mantenha a janela aberta; iniciar diretamente com `python app.py` não usa esse supervisor. A retomada respeita pausas e autorizações salvas e não cria novo upload para um envio incerto.
+Na versão 0.12, **iniciar.bat** executa em segundo plano, sem depender de uma janela de terminal aberta. **iniciar_console.bat** e **iniciar_tester.bat** mantêm a execução visível para diagnóstico e testes. As três opções usam um supervisor. Se o processo do aplicativo cair inesperadamente, ele tenta reabrir até cinco vezes, após 5, 15, 30, 60 e 120 segundos. Depois de uma hora contínua, uma nova queda começa outra sequência. O navegador abre somente na primeira execução. Encerrar normalmente, usar Ctrl+C, já existir outra instância ou faltar configuração de instalação/porta não provoca reinícios. No modo console ou tester, mantenha a janela aberta. Iniciar diretamente com `python app.py` não usa esse supervisor. A retomada respeita pausas e autorizações salvas e não cria novo upload para um envio incerto.
 
 Planejamento, produção, entrega, catálogo, fotos e cópias do banco têm ciclos independentes. Um erro inesperado em uma rotina aguarda 5, 15, 60 e até 300 segundos antes de tentar o próximo ciclo; operações de catálogo, imagens e renderização mantêm também suas próprias esperas e limites. O checklist mostra falhas, início e ciclos demorados. Um ciclo demorado pede conferência; o programa não dispara outro ciclo concorrente para tentar substituí-lo.
 
@@ -37,7 +37,7 @@ O banco recebe uma cópia local verificada ao abrir e a cada 24 horas de operaç
 
 Essas cópias contêm cadastros, links pessoais, roteiros, configurações e registros de envio: mantenha-as privadas. Não incluem os arquivos separados de credenciais, fotos ou vídeos. Não são enviadas ao GitHub ou a um serviço externo e não substituem uma cópia em outro disco. Restaurar requer análise dos envios existentes no destino; não há restauração automática que possa reapresentar uma publicação antiga. **Não substitua o banco enquanto o programa estiver aberto.**
 
-O supervisor opera enquanto sua janela está aberta. A versão não instala serviço nem inicialização com o Windows. Computador desligado, tampa que suspende o notebook, falta de rede, autorização vencida e configuração inicial pendente continuam limitando a operação. O primeiro envio em uma conta real permanece pendente de validação.
+Para iniciar automaticamente ao entrar na sua conta do Windows, execute **ativar_inicio_windows.bat**. Para retirar esse início automático, execute **desativar_inicio_windows.bat**; o programa atual continua aberto até executar **parar.bat**. A opção usa somente a entrada de inicialização do usuário atual, sem serviço do Windows ou privilégios de administrador. Outra instalação com a mesma entrada é preservada. O caminho da pasta e o ambiente Python precisam continuar disponíveis. Após atualizar arquivos Python, encerre e abra novamente para carregar a versão nova. Computador desligado, tampa que suspende o notebook, falta de rede, autorização vencida e configuração inicial pendente continuam limitando a operação. O teste privado em conta real foi confirmado; a publicação pública comercial permanece pendente de validação.
 
 ## Configuração inicial
 
@@ -45,7 +45,11 @@ O supervisor opera enquanto sua janela está aberta. A versão não instala serv
 
 Em **Começar → Teste completo antes da afiliação**, clique **Criar vídeo de teste**. O programa cria e verifica um clipe próprio identificado como teste privado, sem oferta nem link comercial. Não exige produto cadastrado ou conta de afiliado. Ao terminar, assista à prévia. A geração não envia nada ao YouTube.
 
-Conecte seu canal pela etapa 02 e clique **Autorizar envio privado e iniciar**. O teste usa a API oficial e sempre pede visibilidade **privada**, sem agenda ou notificação aos inscritos. Só aparece como confirmado depois de consultar o vídeo processado, privado e pertencente ao canal autorizado. Não ativa a rotina pública, não cria produto, não registra venda e não altera cliques ou comissões. O modo tester permite a preparação local e bloqueia o envio.
+Com o clipe pronto e a credencial salva, **Conectar e testar em privado** abre o navegador padrão do Windows. Ao concluir pessoalmente o consentimento Google, o teste inicia sozinho. O botão da etapa 02 permite conectar somente o canal, sem iniciar envio. Se já estiver conectado, use **Autorizar envio privado e iniciar**. O teste usa a API oficial e sempre pede visibilidade **privada**, sem agenda ou notificação aos inscritos. Só aparece como confirmado depois de consultar o vídeo processado, privado e pertencente ao canal autorizado. Não ativa a rotina pública, não cria produto, não registra venda e não altera cliques ou comissões. O modo tester permite a preparação local e bloqueia o envio.
+
+Uma autorização Google pendente passa a ser protegida pelo Windows e persistida por até dez minutos, com uso único: reiniciar o programa durante esse intervalo permite continuar o mesmo retorno; uma nova tentativa invalida a anterior. Senha e consentimento continuam no Google. Erro ou expiração exige abrir uma nova autorização.
+
+Os registros privados do processo ficam em **data/background.log**, com rotação de até dois arquivos de 2 MB. Não compartilhe esses arquivos sem revisar: eles podem conter caminhos e detalhes de operação. O relatório de suporte continua sem credenciais. **iniciar.bat** reaproveita uma instância saudável; **parar.bat** pede encerramento local autenticado, sem procurar ou matar outros processos Python. Agendamentos já confirmados no destino precisam continuar sendo gerenciados lá.
 
 Existe um único teste persistido por instalação: novos cliques não geram outro vídeo nem abrem outro upload. A sessão existente pode continuar após reiniciar. Uma interrupção ou resposta incerta durante a abertura do envio exige conferir o YouTube Studio; o programa não abre outro upload para substituir uma tentativa sem confirmação. Falhas de consulta usam esperas de 1, 2, 5, 15 e 30 minutos; após seis falhas, o teste pausa e oferece retomada. Pausar o teste é independente de pausar a rotina. Uma requisição já iniciada pode terminar no destino como privada.
 
@@ -118,7 +122,7 @@ Na versão 0.7, a continuidade também cobre vídeos automáticos já prontos, a
 
 O catálogo autorizado continua com intervalo normal de quatro horas. Falhas temporárias de rede ou da fonte usam esperas de 5, 15, 30, 60, 120 e depois até 240 minutos, salvas no banco. Arquivo inválido ou acesso recusado aguarda quatro horas. Uma consulta bem-sucedida zera a sequência de falhas. Os dados anteriores são preservados; itens sem confirmação por 24 horas continuam bloqueados para a rotina. Pausar, trocar a fonte ou importar um arquivo durante uma consulta impede que a resposta antiga substitua a escolha mais recente. O painel mostra tentativa, atualização aceita e próxima consulta; o horário é uma previsão enquanto o programa está aberto.
 
-Essas retomadas dependem de **programa aberto**, computador ligado e permissões válidas. Reabrir preserva prazos, mas esta versão não instala um serviço nem inicia com o Windows. Campanhas com revisão manual, edição desatualizada, três falhas de geração ou envio externo incerto continuam pedindo sua intervenção. A fila total de três vídeos pendentes é mantida para limitar acúmulo, inclusive quando algum item exige atenção.
+Essas retomadas dependem de **programa aberto**, computador ligado e permissões válidas. Reabrir preserva prazos; a versão 0.12 oferece início com Windows e operação em segundo plano, conforme a seção de continuidade. Campanhas com revisão manual, edição desatualizada, três falhas de geração ou envio externo incerto continuam pedindo sua intervenção. A fila total de três vídeos pendentes é mantida para limitar acúmulo, inclusive quando algum item exige atenção.
 
 A página **Começar e acompanhar** mostra dependências de vídeo, espaço livre, produtos autorizados, acesso ao canal e o último teste local. Ela também mostra o próximo produto elegível, os horários em uso e publicações que aguardam resultados informados.
 
@@ -132,7 +136,7 @@ A geração exige dependências disponíveis e pelo menos 512 MB de espaço livr
 
 Em **Resultados**, a operação também consulta contagens públicas de vídeos que o sistema confirmou como publicados no YouTube. Com conta conectada e rotina ativa, cada vídeo pode ser atualizado a cada seis horas, em lotes de até 20 por consulta. Conferimos o canal e a visibilidade pública antes de aceitar visualizações, curtidas ou comentários. A tabela mostra a data da leitura; dados ausentes não viram zero, e uma falha preserva a última contagem com aviso. Essa leitura não altera cliques, comissões nem marca resultados de afiliado como informados.
 
-As métricas usam a mesma autorização Google e a [consulta oficial de vídeos](https://developers.google.com/youtube/data/reference/rest/v3/videos/list), sujeita à disponibilidade e cota da API. Contagens não comprovam atenção, cliques no link ou vendas. Leituras com falha aguardam pelo menos 15 minutos; a consulta não repete uploads. Desconectar o canal remove esse cache, e contagens automáticas com mais de 30 dias são descartadas quando o aplicativo volta a executar. A integração de métricas foi testada com respostas simuladas; ainda falta uma conta real autorizada nesta instalação.
+As métricas usam a mesma autorização Google e a [consulta oficial de vídeos](https://developers.google.com/youtube/data/reference/rest/v3/videos/list), sujeita à disponibilidade e cota da API. Contagens não comprovam atenção, cliques no link ou vendas. Leituras com falha aguardam pelo menos 15 minutos; a consulta não repete uploads. Desconectar o canal remove esse cache, e contagens automáticas com mais de 30 dias são descartadas quando o aplicativo volta a executar. A integração de métricas foi testada com respostas simuladas; a validação com publicações comerciais reais continua pendente.
 
 Em **Modo automático → Como escolher os horários**, escolha horários fixos ou aprendizado pelos cliques registrados. Na configuração inicial recomendada, o aprendizado está habilitado e começa usando 18h. A mudança considera apenas resultados explicitamente salvos em **Registrar publicação**, com pelo menos três registros em cada um de dois horários. Publicações automáticas ainda sem resultados ficam como **não informadas** e não contam como zero cliques. Um zero que você registrar é uma observação válida.
 
@@ -154,7 +158,7 @@ Uma trava do sistema operacional limita o uso a uma instância por pasta de dado
 - Mantém o ID do vídeo e não cria um novo envio quando a resposta de um upload fica incerta. Nesse caso, confira o YouTube Studio e vincule o ID privado existente no painel. Falhas temporárias após criar a sessão são consultadas novamente após 15 minutos. A retomada usa a sessão persistida.
 - Não acompanha comissões ou cliques automaticamente. Registre os valores confirmados pela plataforma e todos os custos em **Resultados** para medir o resultado dos valores registrados.
 
-A integração depende de autorização, permissões, cotas e processamento do Google. Não foi validada com um canal real nesta instalação, pois ele ainda não está conectado. O botão de iniciar permanece desabilitado enquanto faltarem produtos autorizados ou canal.
+A integração depende de autorização, permissões, cotas e processamento do Google. O primeiro teste privado em canal real foi confirmado, incluindo processamento e propriedade do canal; o agendamento e a publicação pública comercial ainda precisam ser validados. O botão de iniciar permanece desabilitado enquanto faltarem produtos autorizados ou canal.
 
 ## Descoberta contínua por catálogo
 

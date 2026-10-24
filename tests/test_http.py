@@ -57,6 +57,21 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(state['products'],[])
         self.assertEqual(headers['Cache-Control'],'no-store')
 
+    def test_health_identifies_installation_without_credentials(self):
+        status,_,body=self.request('/api/health')
+        value=json.loads(body)
+        self.assertEqual(status,200);self.assertEqual(value['app'],'AfiliadosStudio')
+        self.assertNotIn('token',value);self.assertNotIn(str(core.DATA),body.decode())
+
+    def test_exit_requires_csrf_and_uses_graceful_server_shutdown(self):
+        self.assertEqual(self.request('/api/system/exit',{})[0],403)
+        with patch.object(self.server,'shutdown') as shutdown,patch.object(app.STOP,'set') as stop:
+            self.assertEqual(self.request('/api/system/exit',{}, {'X-Studio-Token':app.TOKEN})[0],200)
+            import time
+            deadline=time.monotonic()+2
+            while not shutdown.called and time.monotonic()<deadline:time.sleep(.01)
+            shutdown.assert_called_once();stop.assert_called_once()
+
     def test_start_requires_products_and_channel(self):
         status,headers,body=self.request('/api/setup/start',{}, {'X-Studio-Token':app.TOKEN})
         self.assertEqual(status,400)

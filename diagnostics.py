@@ -121,7 +121,7 @@ def retry_render(jid):
 
 def state():
     import autopilot,catalog,youtube_client,production,planning,campaigns
-    import runtime_service,maintenance
+    import runtime_service,maintenance,background
     resources=runtime();config=autopilot.settings();channel=youtube_client.state();test=report()
     options=autopilot.candidates(config,core.now())
     with core.db() as c:
@@ -138,9 +138,11 @@ def state():
     services=runtime_service.state();backup=maintenance.state()
     issues=[s for s in services if s['status'] in ('retry','slow','stopped')]
     starting=not services or any(not s['last_success'] for s in services)
+    lifecycle={'background':os.environ.get('AFILIADOS_BACKGROUND')=='1','windows_startup':background.startup_enabled()}
+    continuity=(' Programa em segundo plano.' if lifecycle['background'] else ' Execução em janela.')+(' Início com Windows ativo.' if lifecycle['windows_startup'] else ' Início com Windows desativado.')
     checks.extend([
         {'label':'Rotinas em segundo plano','status':'warning' if issues else 'pending' if starting else 'ok',
-         'detail':('Aguardando retomada ou conferência: '+', '.join(s['name'] for s in issues)+'.') if issues else ('Iniciando as rotinas locais; aguardando o primeiro ciclo.' if starting else 'Rotinas locais respondendo; falhas temporárias têm nova tentativa.'),'href':'#start'},
+         'detail':(('Aguardando retomada ou conferência: '+', '.join(s['name'] for s in issues)+'.') if issues else ('Iniciando as rotinas locais; aguardando o primeiro ciclo.' if starting else 'Rotinas locais respondendo; falhas temporárias têm nova tentativa.'))+continuity,'href':'#start'},
         {'label':'Cópia local do banco','status':'ok' if backup['status']=='ok' else 'warning' if backup['status']=='warning' else 'pending',
          'detail':backup['message']+(' Última cópia: '+backup['last_success'] if backup.get('last_success') else ''),'href':'#help'}])
     if core.TESTER:
@@ -153,4 +155,4 @@ def state():
                                  'reason':'Primeiro conteúdo deste produto.' if not p['sample_count'] else 'Nova variação elegível; intervalo e limite por produto respeitados.'}
     return {'checks':checks,'test':test,'errors':errors,'next_product':next_product,'timing':autopilot.timing(config),'queue':production.queue(),'plan':planning.state(),
             'pending_results':sum(j['status']=='published' and not j['results_recorded_at'] for j in jobs),
-            'runtime_ok':resources['renderer'] and resources['disk_ok'],'services':services,'backup':backup}
+            'runtime_ok':resources['renderer'] and resources['disk_ok'],'services':services,'backup':backup,'lifecycle':lifecycle}
