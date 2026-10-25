@@ -331,3 +331,12 @@ Durante reprodução, a atualização não deve reiniciar o vídeo. Erros permit
 No tester, autorize um produto demonstrativo com link ilustrativo. Aplique-o à minissérie e confira a remontagem: ficção preservada, publicidade visível desde o início e bloco comercial final sem atores ou depoimentos. A legenda deve conter exatamente o link cadastrado e explicar a possível comissão. Reaplicar a mesma oferta não deve recriar a temporada. Produto alterado ou autorização retirada deve sinalizar oferta desatualizada e ocultar os downloads da versão antiga na tela.
 
 O campo de perfil aceita somente um @ válido. Salvar um @ não deve informar conta conectada nem publicar. Durante geração, editar o formulário não deve apagar o que está digitando. As marcações nativas de publicidade e IA são verificações do envio real, fora deste teste local.
+
+
+## 23. Montagem com cortes e movimento
+
+Em um episódio pronto, clique em **Remontar com cortes e movimento**. Deve entrar na fila uma única vez, sem criar outro episódio ou modificar o TikTok. Durante a montagem, o botão e a prévia ficam indisponíveis. A versão anterior fica em disco até a substituição do MP4 validado.
+
+Assista ao arquivo novo: tomadas de até quatro segundos, planos gerais e reações, chave girando, carta deslizando do envelope, fotografia se movendo e abertura de porta nas cenas correspondentes. As legendas devem ficar estáveis e suas trocas não devem reiniciar a câmera. Os personagens continuam em imagens; não avaliar como animação corporal ou sincronização labial. Confira narração inteligível e efeitos suaves.
+
+Confira a publicidade e o link de afiliado preservados, o formato vertical e o registro da montagem em roteiro.json. Para testar clipes próprios, use somente um padrão sintético ou material autorizado no ambiente tester e siga [CENAS_EM_MOVIMENTO.md](CENAS_EM_MOVIMENTO.md). Alterar o arquivo sem atualizar sua autorização deve interromper a montagem e preservar o MP4 anterior. Nenhum destes testes publica em redes sociais.

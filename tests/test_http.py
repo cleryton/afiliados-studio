@@ -97,6 +97,14 @@ class HTTPTests(unittest.TestCase):
         with patch.object(stories,'set_profile',return_value={'ok':True,'publishing_connected':False}):
             self.assertEqual(self.request('/api/stories/profile',{'handle':'@projeto_teste'},{'X-Studio-Token':app.TOKEN})[0],200)
 
+    def test_story_rebuild_is_csrf_protected_local_action(self):
+        import stories
+        path='/api/stories/'+'a'*32+'/rebuild'
+        self.assertEqual(self.request(path,{})[0],403)
+        with patch.object(stories,'rebuild') as rebuild,patch.object(core,'TESTER',True):
+            self.assertEqual(self.request(path,{}, {'X-Studio-Token':app.TOKEN})[0],200)
+        rebuild.assert_called_once_with('a'*32)
+
     def test_immediate_endpoint_requires_csrf_and_blocks_tester(self):
         import publication
         path='/api/youtube/publish-now/'+'a'*32

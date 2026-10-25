@@ -47,6 +47,15 @@ class StoriesTests(unittest.TestCase):
         self.assertEqual(episodes[0]['id'],first['id']);self.assertEqual(episodes[0]['status'],'queued')
         self.assertEqual(episodes[1]['status'],'ready')
 
+    def test_rebuild_is_local_idempotent_in_queue_and_preserves_other_episodes(self):
+        stories.create_pilot();first=stories.claim_next()
+        with core.db() as c:c.execute("UPDATE story_episodes SET status='ready'")
+        stories.rebuild(first['id'])
+        self.assertEqual([e['status'] for e in stories.state()['episodes']],['queued','ready','ready'])
+        self.assertFalse(stories.state()['publishing_connected'])
+        with self.assertRaises(ValueError):stories.rebuild(first['id'])
+        self.assertEqual(stories.claim_next()['id'],first['id'])
+
     def test_unknown_media_and_traversal_are_rejected(self):
         for eid,name in [('../secret','video.mp4'),('a'*32,'../tokens.json'),('a'*32,'speech-0.wav')]:
             with self.subTest(eid=eid,name=name),self.assertRaises(ValueError):stories.media_file(eid,name)
@@ -67,6 +76,10 @@ class StoriesTests(unittest.TestCase):
         self.assertTrue((folder/'poster.png').is_file());self.assertTrue((folder/'legendas.srt').is_file())
         meta=json.loads((folder/'roteiro.json').read_text(encoding='utf-8'))
         self.assertEqual(len(meta['sha256']),64);self.assertFalse(list(folder.glob('speech-*')))
+        self.assertEqual(meta['editing_style'],'cinematic-local-v1')
+        self.assertFalse(meta['character_animation'])
+        self.assertEqual(len(meta['shot_timeline']),2)
+        self.assertFalse(list(folder.glob('motion-*')))
         self.assertFalse(list(folder.glob('clip-*')));self.assertFalse(list(folder.glob('overlay-*')))
 
     def test_missing_assets_preserve_existing_video_and_clear_intermediates(self):

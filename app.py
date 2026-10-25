@@ -228,6 +228,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200,story_offers.attach(payload))
             if path=='/api/stories/profile':
                 return self.respond(200,stories.set_profile(payload))
+            story_rebuild=re.fullmatch(r'/api/stories/([a-f0-9]{32})/rebuild',path)
+            if story_rebuild:
+                stories.rebuild(story_rebuild[1]);return self.respond(200,{'ok':True})
             story_retry=re.fullmatch(r'/api/stories/([a-f0-9]{32})/retry',path)
             if story_retry:
                 stories.retry(story_retry[1]);return self.respond(200,{'ok':True})

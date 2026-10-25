@@ -55,6 +55,7 @@ def state():
         row['video_url']=f"/stories/{row['id']}/video.mp4?v={row['updated_at']}" if row['status']=='ready' and row['offer_current'] else None
     from story_renderer import asset_path
     assets_ready=all(asset_path(name).is_file() for name in ('discovery.png','corridor.png','sisters.png'))
+    assets_ready=assets_ready and all((core.ROOT/'assets'/'story-pilot'/name).is_file() for name in ('key-prop.png','envelope-prop.png','photo-prop.png'))
     return {'series':series,'episodes':episodes,'publishing_connected':False,'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
             'destination':'TikTok','notice':'Criação local de ficção. Publicação no TikTok ainda não conectada; nenhum episódio será enviado ao YouTube ou a contas pessoais.'}
 
@@ -70,6 +71,13 @@ def retry(eid):
     with core.db() as c:
         if not c.execute("UPDATE story_episodes SET status='queued',error='',updated_at=? WHERE id=? AND status='error'",(core.stamp(),eid)).rowcount:
             raise ValueError('Somente episódios com erro podem voltar à fila.')
+
+
+def rebuild(eid):
+    """Request a fresh local edit; never changes an existing social publication."""
+    with core.db() as c:
+        if not c.execute("UPDATE story_episodes SET status='queued',error='',updated_at=? WHERE id=? AND status='ready'",(core.stamp(),eid)).rowcount:
+            raise ValueError('Somente episódios prontos podem ser remontados. Aguarde a fila atual.')
 
 
 def claim_next():

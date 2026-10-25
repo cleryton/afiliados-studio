@@ -1,5 +1,13 @@
 # Alterações
 
+## 0.15.0-beta — 25/10/2026
+
+- Montagem local com tomadas de até quatro segundos, planos de reação e detalhes; objetos fotográficos com transparência animados separadamente do fundo, sem reiniciar a câmera nas trocas de legenda.
+- Ambiente e efeitos originais de metal, papel e porta, com voz normalizada e limitação de volume. Sem músicas baixadas ou serviços pagos.
+- Clipes próprios por cena, com autorização explícita, origem e hash; enquadramento vertical, repetição de clipes curtos e registro no roteiro. Vídeo inválido preserva o MP4 anterior.
+- Botão para remontar um episódio pronto, sem duplicar a temporada ou alterar publicações externas. Personagens ainda sem atuação corporal ou sincronização labial.
+- Testes de continuidade dos planos, movimento independente dos objetos, áudio, autorização de clipes, renderização real e proteção da remontagem local.
+
 ## 0.14.0-beta — 24/10/2026
 
 - Oferta opcional de afiliado vinculada a produto ativo e autorizado, com publicidade separada da ficção, link preservado e verificação de mudanças nos dados. Perfil de destino indicado sem fingir autenticação ou publicação automática.

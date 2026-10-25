@@ -1,4 +1,4 @@
-"""Assemble AI stills, local speech and caption overlays into vertical fiction."""
+"""Edit vertical fiction with short shots, prop animation and local narration."""
 import hashlib
 import json
 import math
@@ -8,6 +8,7 @@ import wave
 from PIL import Image, ImageDraw
 import core
 import creative
+import story_motion
 from renderer import font, wrap
 
 ASSETS={'key':'discovery.png','letter':'sisters.png','building':'corridor.png',
@@ -75,6 +76,7 @@ def render(episode):
     try:
         # Check the entire source set before spending time on narration.
         assets=[asset_for(episode,i,s) for i,s in enumerate(scenes)]
+        clips=[story_motion.authorized_clip(episode,i) if s['visual']!='offer' else None for i,s in enumerate(scenes)]
         for index,scene in enumerate(scenes):
             speech=directory/f'speech-{index}.json';audio=directory/f'speech-{index}.wav'
             speech.write_text(json.dumps({'text':scene['text'],'rate':0},ensure_ascii=False),encoding='utf-8')
@@ -88,6 +90,7 @@ def render(episode):
             durations.append(math.ceil(max(4.5,duration+.35)*24)/24);voice.append(voiced)
         if sum(durations)>180:raise ValueError('Episódio longo demais.')
         cards=creative.subtitle_segments([s['text'] for s in scenes],durations)
+        backgrounds=[story_motion.render_background(exe,episode,i,s,durations[i],assets[i],directory,clips[i]) for i,s in enumerate(scenes)]
         part=0
         for index,scene in enumerate(scenes):
             scene_cards=[c for c in cards if c['scene']==index];base=scene_cards[0]['start']
@@ -96,19 +99,22 @@ def render(episode):
                 caption=directory/f'overlay-{part}.png';overlay(episode,card['text'],caption,commercial)
                 segment=directory/f'clip-{part}.mp4';length=card['end']-card['start']
                 command=[exe,'-y','-hide_banner','-loglevel','error']
-                if commercial:command+=['-f','lavfi','-i','color=c=0x142725:s=720x1280:r=24']
-                else:command+=['-loop','1','-framerate','24','-i',str(assets[index])]
+                command+=['-ss',f"{max(0,card['start']-base):.6f}",'-i',str(backgrounds[index])]
                 command+=['-loop','1','-framerate','24','-i',str(caption)]
                 if voice[index]:command+=['-ss',str(max(0,card['start']-base)),'-i',str(directory/f'speech-{index}.wav')]
                 else:command+=['-f','lavfi','-i','anullsrc=r=44100:cl=mono']
-                # Camera movement affects the scene only; captions remain still and legible.
-                graph="[0:v]scale=720:1280,zoompan=z='min(1.02,1+on*0.0001)':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=720x1280:fps=24[bg];[bg][1:v]overlay=0:0,format=yuv420p[v]"
+                # The scene timeline continues across caption cards without resets.
+                graph='[0:v][1:v]overlay=0:0,setsar=1,format=yuv420p[v]'
                 command+=['-filter_complex',graph,'-map','[v]','-map','2:a','-t',f'{length:.6f}',
                           '-c:v','libx264','-preset','ultrafast','-crf','24','-c:a','aac','-ar','44100','-ac','1','-af','apad','-movflags','+faststart',str(segment)]
                 subprocess.run(command,**run_options);segments.append(segment);part+=1
         listing=directory/'segments.txt';listing.write_text('\n'.join(f"file '{p.name}'" for p in segments),encoding='utf-8')
-        building=directory/'building.mp4'
-        subprocess.run([exe,'-y','-hide_banner','-loglevel','error','-f','concat','-safe','1','-i',str(listing),'-c','copy','-movflags','+faststart',str(building)],**run_options)
+        assembled=directory/'assembled.mp4';building=directory/'building.mp4'
+        subprocess.run([exe,'-y','-hide_banner','-loglevel','error','-f','concat','-safe','1','-i',str(listing),'-c','copy',str(assembled)],**run_options)
+        sound=directory/'ambience.wav';story_motion.sound_design(sound,scenes,durations)
+        subprocess.run([exe,'-y','-hide_banner','-loglevel','error','-i',str(assembled),'-i',str(sound),
+            '-filter_complex','[0:a]loudnorm=I=-18:TP=-2:LRA=11[voice];[voice][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95:level=0[a]',
+            '-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-ar','44100','-ac','1','-movflags','+faststart',str(building)],**run_options)
         duration=validate(building,sum(durations))
         building.replace(directory/'video.mp4')
         subprocess.run([exe,'-y','-v','error','-ss','1','-i',str(directory/'video.mp4'),'-frames:v','1',str(directory/'poster.png')],**run_options)
@@ -120,8 +126,13 @@ def render(episode):
         (directory/'legendas.srt').write_text(creative.srt(cards),encoding='utf-8')
         (directory/'roteiro.json').write_text(json.dumps({'title':episode['series_title'],'episode':episode['number'],'scenes':scenes,
             'duration':duration,'voice':all(voice),'ai_images':True,'offer':offer,'image_generation':'Prepared separately; no automatic image service connected.',
-            'subtitle_timing':'estimated_by_text','sha256':hashlib.sha256((directory/'video.mp4').read_bytes()).hexdigest()},ensure_ascii=False,indent=2),encoding='utf-8')
+            'subtitle_timing':'estimated_by_text','editing_style':story_motion.STYLE,
+            'character_animation':False,'sound_design':'original_local_synthesis',
+            'shot_timeline':[{'scene':i,'source':'authorized_video' if clips[i] else 'local_composite',
+                'shots':[] if clips[i] else story_motion.shots(s,durations[i]),
+                'clip':{k:v for k,v in clips[i].items() if k!='path'} if clips[i] else None} for i,s in enumerate(scenes)],
+            'sha256':hashlib.sha256((directory/'video.mp4').read_bytes()).hexdigest()},ensure_ascii=False,indent=2),encoding='utf-8')
         return {'voice':all(voice),'duration':duration,'warning':'' if all(voice) else 'Sem voz pt-BR disponível; episódio com texto. Instale uma voz portuguesa e gere novamente.'}
     finally:
-        for pattern in ('speech-*.json','speech-*.wav','clip-*.mp4','overlay-*.png','segments.txt','building.mp4'):
+        for pattern in ('speech-*.json','speech-*.wav','clip-*.mp4','overlay-*.png','motion-*.mp4','motion-error.txt','ambience.wav','assembled.mp4','segments.txt','building.mp4'):
             for file in directory.glob(pattern):file.unlink(missing_ok=True)

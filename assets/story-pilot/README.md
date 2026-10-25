@@ -9,3 +9,14 @@ Arquivos originais copiados para este projeto, sem alteração dos originais: `d
 1. **discovery.png** — Photorealistic vertical 9:16 cinematic still for original Brazilian fiction. Entirely fictional adult Lia, 28, warm brown skin, brown eyes, short dark brown wavy bob, forest-green jacket and beige blouse. In her late mother's modest São Paulo apartment she discovers an old brass key tagged 12 in a cream envelope. Uneasy, curious expression; face and key visible. Warm window light, lived-in furniture, quiet dark lower quarter for captions. No logos or watermarks. No real-person reference.
 2. **corridor.png** — Use discovery.png as Lia's identity and wardrobe reference. Same face, hair, skin, green jacket and beige blouse. New realistic 9:16 scene: old São Paulo corridor beside a wooden door numbered 12. Lia holds the key. Fictional caretaker Davi, 50, graying hair and blue shirt, looks concerned. Warm tungsten lamps, medium two-person shot, quiet lower quarter, no overlays or brand marks.
 3. **sisters.png** — Use discovery.png as Lia's exact identity reference. New realistic 9:16 scene inside the modest apartment by an open wooden door. Lia on the left meets fictional Eva, 35, warm brown skin, black curly shoulder-length hair, burgundy blouse. Eva holds an indistinct old photograph and cream envelope. Both surprised and moved, restrained acting, no embrace. Warm lamp and cool window light, dark quiet lower quarter, no logos, overlays or celebrity likeness.
+
+
+## Objetos com transparência — montagem 0.15
+
+Produzidos com a ferramenta integrada de geração de imagens, preservando os originais e o canal alfa. Não são clipes de um modelo de vídeo. A montagem local anima os objetos em camadas; a fotografia inclui pessoas inteiramente fictícias.
+
+- **key-prop.png** — Photorealistic antique brass apartment key with oval tag engraved 12, complete isolated silhouette, warm worn metal, transparent background, no hands or other objects.
+- **envelope-prop.png** — Photorealistic old cream envelope, top-down, back facing viewer, triangular flap open, empty pocket, no text or hands, genuinely transparent background.
+- **photo-prop.png** — Photorealistic isolated vintage sepia print with cream scalloped edges, fictional Brazilian adult mother holding a fully clothed newborn in a modest 1980s living room; no text, no hands, transparent margins.
+
+Os prompts acima registram a direção final de cada objeto. Os arquivos finais ficam nesta pasta, acompanham o projeto e não dependem de uma pasta particular do gerador.
