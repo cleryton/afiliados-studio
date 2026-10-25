@@ -33,3 +33,8 @@ O padrão renderiza em 540 × 960, com 12 quadros de animação por segundo, e e
 - `data/story-3d/preview.json` aponta apenas para a última prévia completa. Arquivos locais e registros de renderização ficam fora do GitHub.
 
 A fila comum de três episódios ainda usa a montagem anterior. O piloto 3D é gerado por esse comando próprio e exibido separadamente no painel; não há geração contínua de temporadas 3D nem postagem automática incorporada a ele.
+
+
+## Melhoria da revelação — versão 0.17
+
+A cena final pode usar a intensidade medida no áudio para abrir a boca e mover a expressão de Eva durante sua fala. Continua sem reconhecimento de palavras ou sincronização por fonema. Para reaproveitar cinco clipes anteriores com hash, roteiro, resolução e taxa conferidos, use `--reuse-pilot ID_DO_PILOTO_ANTERIOR` junto das opções normais. Essa opção remonta a oferta e a cena final, preservando a prévia anterior até terminar. Reaproveitar cenas não gera um novo capítulo para publicação.

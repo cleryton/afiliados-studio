@@ -216,7 +216,7 @@ class Handler(BaseHTTPRequestHandler):
                 STOP.set()
                 threading.Thread(target=self.server.shutdown,daemon=True).start()
                 return
-            external={'/api/setup/start','/api/youtube/credentials','/api/youtube/connect','/api/youtube/verify','/api/youtube/settings','/api/youtube/test/start','/api/automation/connect','/api/automation/install'}
+            external={'/api/setup/start','/api/youtube/credentials','/api/youtube/connect','/api/youtube/verify','/api/youtube/settings','/api/youtube/test/start','/api/automation/connect','/api/automation/install','/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'}
             if core.TESTER and path in external:
                 raise ValueError('O modo tester bloqueia contas e envios externos. Use a demonstração local; a publicação real exige iniciar.bat.')
             if path=='/api/tester/demo':
@@ -228,6 +228,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200,story_offers.attach(payload))
             if path=='/api/stories/profile':
                 return self.respond(200,stories.set_profile(payload))
+            if path in ('/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'):
+                import story_publishing
+                if path.endswith('/connect'):result=story_publishing.connect(payload)
+                elif path.endswith('/settings'):result=story_publishing.configure(payload)
+                elif path.endswith('/queue'):result=story_publishing.queue(payload.get('media_id'),payload.get('now') is True)
+                else:raise ValueError('Operação de publicação inválida.')
+                return self.respond(200,result)
             story_rebuild=re.fullmatch(r'/api/stories/([a-f0-9]{32})/rebuild',path)
             if story_rebuild:
                 stories.rebuild(story_rebuild[1]);return self.respond(200,{'ok':True})
@@ -418,7 +425,7 @@ def serve(args):
     except OSError:
         print(f'A porta {args.port} está ocupada. Use python app.py --port 8766')
         raise SystemExit(4)
-    import catalog_media,maintenance,runtime_service,channel_probe
+    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing
     runtime_service.start([
         ('planejamento',autopilot.cycle,60,300),
         ('produção',worker,2,600),
@@ -428,6 +435,7 @@ def serve(args):
         ('cópias',maintenance.tick,60,60),
         ('teste privado',channel_probe.tick,5,300),
         ('histórias locais',stories.tick,5,600),
+        ('TikTok das histórias',story_publishing.tick,15,180),
     ],STOP)
     url = f'http://127.0.0.1:{args.port}'
     print(f'Afiliados Studio {VERSION} | '+('MODO TESTER · PUBLICAÇÃO BLOQUEADA | ' if core.TESTER else '')+f'{url} | Ctrl+C para encerrar', flush=True)

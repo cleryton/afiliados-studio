@@ -1,5 +1,7 @@
 # TikTok: conta, conteúdo e publicação
 
+**Atualização 0.17:** existe integração opcional com Upload-Post para histórias, com identificação comercial e de IA. A conta gratuita conferida bloqueou TikTok, então não há conexão ativa nem publicação automática confirmada. O aplicativo não contrata planos. Veja [POSTAGEM_TIKTOK.md](POSTAGEM_TIKTOK.md); os limites das integrações anteriores abaixo continuam descritos para cada caminho.
+
 ## Histórias de ficção — versão 0.14
 
 Abra **Histórias no TikTok** no painel. **Preparar os três episódios** coloca a minissérie original **A chave do 12** na fila local. Os episódios são gerados em ordem, com imagens realistas de personagens fictícios, movimento de câmera, narração pt-BR do Windows e legendas aproximadas por trechos. O terceiro encerra a história.

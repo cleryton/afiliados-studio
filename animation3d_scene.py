@@ -83,7 +83,7 @@ def actor(name, clothes, hair, skin, location, curly=False, male=False):
     head = empty(name+' head', (0, 0, 2.29), root)
     ball(name+' face', (0, 0, 0), (.345, .30, .425), skin, head, 28)
     for side in (-1, 1):ball(name+' ear', (side*.338, -.012, -.02), (.066, .047, .10), skin, head)
-    eyes = []
+    eyes = [];brows=[]
     for side in (-1, 1):
         eye = empty(name+' eye', (side*.125, -.262, .065), head);eyes.append(eye)
         ball(name+' sclera', (0, 0, 0), (.093, .051, .10), C['white'], eye)
@@ -92,6 +92,7 @@ def actor(name, clothes, hair, skin, location, curly=False, male=False):
         ball(name+' catchlight', (-.009, -.069, .022), (.012, .006, .014), C['white'], eye)
         brow = rod(name+' brow', (side*.065, -.285, .218), (side*.198, -.259, .205), .022, hair, head)
         brow.rotation_euler[1] += side*.08
+        brows.append(brow)
     ball(name+' nose', (0, -.303, -.032), (.054, .077, .070), skin, head)
     mouth = ball(name+' mouth', (0, -.284, -.158), (.075, .023, .019), C['mouth'], head)
     ball(name+' lower lip', (0, -.278, -.183), (.062, .019, .016), skin, head)
@@ -135,7 +136,7 @@ def actor(name, clothes, hair, skin, location, curly=False, male=False):
         ball(name+' lower leg',(0,0,-.22),(.09,.10,.29),C['pants'],knee)
         shoe=ball(name+' shoe',(0,-.065,-.53),(.12,.205,.12),C['shoe'],knee)
         legs.append(leg);knees.append(knee);shoes.append(shoe)
-    return dict(root=root,body=body,head=head,eyes=eyes,mouth=mouth,arms=arms,forearms=forearms,hands=hands,legs=legs,knees=knees,shoes=shoes)
+    return dict(root=root,body=body,head=head,eyes=eyes,brows=brows,mouth=mouth,arms=arms,forearms=forearms,hands=hands,legs=legs,knees=knees,shoes=shoes)
 
 
 def key_prop():
@@ -262,10 +263,11 @@ def build(config):
     camera_data.clip_end=100;camera_data.dof.use_dof=False
     samples=[];animated=[]
     for char in visible:
-        animated += [char['root'],char['body'],char['head'],char['mouth'],*char['arms'],*char['forearms'],*char['eyes']]
+        animated += [char['root'],char['body'],char['head'],char['mouth'],*char['arms'],*char['forearms'],*char['eyes'],*char['brows']]
     animated += [key,letter,photo,hinge,package,boxlid,camera]
     fps=scene.render.fps;end=scene.frame_end
-    sample_frames=sorted(set([1,end,*range(1,end+1,4)]))
+    envelope=config.get('speech_envelope',[])
+    sample_frames=sorted(set([1,end,*range(1,end+1,1 if envelope else 4)]))
     for frame in sample_frames:
         t=(frame-1)/fps;p=t/config['duration'];slow=math.sin(t*1.5)
         for idx,char in enumerate(visible):
@@ -274,6 +276,7 @@ def build(config):
             blink=.08 if (t+idx*.7)%4.2<.12 else 1
             for eye in char['eyes']:eye.scale.z=blink
             char['mouth'].scale.z=.019
+            for brow in char['brows']:brow.location.z=.2115
             for side,arm in enumerate(char['arms']):arm.rotation_euler=(.04*slow,(-.12 if side==0 else .12),.015*slow)
             for fore in char['forearms']:fore.rotation_euler=(0,0,0)
         # Hands and faces perform distinct actions, with articulated elbows.
@@ -291,6 +294,11 @@ def build(config):
             lia['head'].rotation_euler[2]=.28+.10*math.sin(t*.8)
             if kind=='room':eva['arms'][0].rotation_euler[0]=-.6+.3*math.sin(t*1.8)
             if p>.45:eva['mouth'].scale.z=.019*(1+3*abs(math.sin(t*10)))
+            if kind=='photo' and envelope:
+                start,stop=config.get('speaking_range',[0,.62]);energy=envelope[min(frame-1,len(envelope)-1)] if start<=p<=stop else 0
+                eva['mouth'].scale.z=.019*(1+2.8*energy)
+                eva['head'].rotation_euler[0]+=.045*energy
+                for brow in eva['brows']:brow.location.z=.2115+.025*energy
         if kind=='building':
             davi['head'].rotation_euler[2]=-.30+.08*slow
             davi['arms'][0].rotation_euler[0]=-.75+.18*slow;davi['forearms'][0].rotation_euler[0]=-.7
@@ -347,7 +355,7 @@ def build(config):
     (output/'motion-state.json').write_text(json.dumps({'engine':scene.render.engine,'kind':kind,'world_up':'Z','character_front':'-Y',
         'objects':len(scene.objects),'meshes':sum(o.type=='MESH' for o in scene.objects),'frames':end,'fps':fps,'samples':samples,
         'rig':'Hierarchical articulated shoulder, elbow, hip and knee controls; baked object animation; no imported avatar.',
-        'mouth':'Procedural opening, not phoneme-aligned lip synchronization.'},indent=2),encoding='utf-8')
+        'mouth':'Audio amplitude drives the revelation scene; no phoneme alignment.' if envelope and kind=='photo' else 'Procedural opening, not phoneme-aligned lip synchronization.'},indent=2),encoding='utf-8')
     bpy.ops.wm.save_as_mainfile(filepath=str(output/'scene.blend'))
     scene.render.filepath=str(output/'frame-')
     if config.get('preview_frame'):

@@ -1,5 +1,7 @@
 # Contrato de interface
 
+Publicação 0.17: seção própria nas histórias para chave protegida, perfil, ativação, horário, agenda e estados de confirmação. A conexão por si só não ativa envios. A chave não pode aparecer em valores pré-preenchidos, erros, estado ou diagnósticos. A restrição de TikTok no gratuito deve ficar explícita, sem contratação automática. O link setup=publishing leva o foco ao campo uma vez por carregamento. Verificar desktop/celular, formulário em foco, rotina pausada, rascunho, envio incerto e link confirmado com fixtures identificadas.
+
 Animação 3D 0.16: exibir uma seção separada somente após renderização completa. Prévia vertical e download com rótulo próprio, descrição de gestos e boca aproximada, sem afirmar geração contínua ou postagem. Os episódios anteriores mantêm seus controles. Verificar vídeo, foco, rolagem, ausência de prévia e largura em 1440 e 390 px.
 
 Montagem 0.15: em episódios prontos, Remontar com cortes e movimento coloca somente aquele episódio na fila local. Explicar que não publica nem altera o TikTok. Ocultar o botão quando não há prévia válida, durante geração ou oferta desatualizada. Usar componentes atuais, foco de teclado e estados em 1440 e 390 px. Texto da introdução distingue objetos animados, clipes próprios e personagens ainda sem atuação corporal.

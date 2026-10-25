@@ -8,7 +8,11 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** fontes na versão 0.16.0-beta. Geração local, envio privado e uma publicação pública com link de afiliado foram confirmados pela API do YouTube em canal real. Isso não comprova vendas ou comissões. Postagem pública automática no TikTok continua sem integração configurada. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** fontes na versão 0.17.0-beta. Geração local, envio privado e uma publicação pública com link de afiliado foram confirmados pela API do YouTube em canal real. Isso não comprova vendas ou comissões. Postagem pública automática no TikTok continua sem integração configurada. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+
+## Postagem das histórias
+
+A versão 0.17 acrescenta uma integração opcional com Upload-Post, fila persistente, marcações de publicidade/IA, proteção contra duplicação e confirmação por link do destino. Na conta gratuita conferida, o provedor bloqueou TikTok até contratar plano pago; por isso a conexão permanece pendente. O aplicativo não contrata planos. Agendar no próprio TikTok Studio é uma alternativa com envio do arquivo pela plataforma, separada da agenda local. Veja [Postagem TikTok](docs/POSTAGEM_TIKTOK.md).
 
 ## Animação 3D local
 

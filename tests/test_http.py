@@ -105,6 +105,12 @@ class HTTPTests(unittest.TestCase):
             self.assertEqual(self.request(path,{}, {'X-Studio-Token':app.TOKEN})[0],200)
         rebuild.assert_called_once_with('a'*32)
 
+    def test_story_publishing_requires_csrf_and_blocks_tester(self):
+        for operation in ('connect','settings','queue'):
+            path='/api/stories/publishing/'+operation
+            self.assertEqual(self.request(path,{})[0],403)
+            with patch.object(core,'TESTER',True):self.assertEqual(self.request(path,{}, {'X-Studio-Token':app.TOKEN})[0],400)
+
     def test_immediate_endpoint_requires_csrf_and_blocks_tester(self):
         import publication
         path='/api/youtube/publish-now/'+'a'*32

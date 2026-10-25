@@ -347,3 +347,10 @@ Confira a publicidade e o link de afiliado preservados, o formato vertical e o r
 Antes de gerar, a tela não deve declarar um vídeo 3D pronto. Depois de uma geração completa, confira a seção Novo · Animação 3D em 1440 e 390 px, o botão de download com foco visível e a reprodução sem reiniciar durante atualizações. A prévia deve apresentar personagens com volume, braços e cabeça em movimento, gestos e porta articulada. Não avaliar como caminhada ou sincronização labial precisa, que não estão implementadas.
 
 Os episódios antigos continuam separados e nenhum envio externo ocorre. Com oferta demonstrativa no tester, conferir publicidade separada, link ilustrativo preservado e ausência de depoimentos. Arquivo incompleto ou produto com autorização retirada não deve produzir uma prévia pronta no painel. Geração 3D é opcional e exige Blender; veja ANIMACAO_3D.md.
+
+
+## 25. Fila opcional de postagem TikTok
+
+No tester, o formulário de conexão e os endpoints de conexão, ativação e fila externa devem estar bloqueados. Não use chaves reais para testar. O painel distingue conexão cadastrada, rotina pausada, agenda local e resposta do destino. Confira 1440 e 390 px, foco do link `?setup=publishing#stories`, entrada de senha protegida e preservação do formulário durante a atualização. A chave deve ser apagada do campo após uma tentativa de conexão, inclusive com erro.
+
+A suíte simula perda de resposta, troca da identificação estável da conta, legenda e vídeo modificados, envio como rascunho, aviso de IA/publicidade, cota e restrição de plano. Nenhum desses testes publica. A confirmação real exige provedor e canal autorizados e link retornado para o perfil esperado. Veja POSTAGEM_TIKTOK.md.

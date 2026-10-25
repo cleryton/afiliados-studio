@@ -26,6 +26,8 @@ def init():
         c.execute("UPDATE story_episodes SET status='queued',error='',updated_at=? WHERE status='rendering'", (core.stamp(),))
     import story_offers
     story_offers.init()
+    import story_publishing
+    story_publishing.init()
 
 
 def create_pilot():
@@ -43,6 +45,7 @@ def create_pilot():
 
 def state():
     import story_offers
+    import story_publishing
     from animation3d import preview_state
     with core.db() as c:
         series=[dict(r) for r in c.execute('SELECT * FROM story_series ORDER BY created_at')]
@@ -57,8 +60,9 @@ def state():
     from story_renderer import asset_path
     assets_ready=all(asset_path(name).is_file() for name in ('discovery.png','corridor.png','sisters.png'))
     assets_ready=assets_ready and all((core.ROOT/'assets'/'story-pilot'/name).is_file() for name in ('key-prop.png','envelope-prop.png','photo-prop.png'))
-    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'publishing_connected':False,'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
-            'destination':'TikTok','notice':'Criação local de ficção. Publicação no TikTok ainda não conectada; nenhum episódio será enviado ao YouTube ou a contas pessoais.'}
+    publishing=story_publishing.state()
+    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'publishing':publishing,'publishing_connected':publishing['connected'],'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
+            'destination':'TikTok','notice':'Criação local de ficção. Confira a conexão e os pedidos na seção de postagem. Nenhum episódio desta fila é enviado ao YouTube ou a contas pessoais.'}
 
 
 def set_profile(payload):

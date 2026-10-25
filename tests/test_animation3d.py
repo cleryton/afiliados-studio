@@ -1,7 +1,10 @@
 import json
+import math
+from array import array
 from pathlib import Path
 import tempfile
 import unittest
+import wave
 from unittest.mock import patch
 import animation3d
 import core
@@ -52,3 +55,15 @@ class Animation3DTests(unittest.TestCase):
         self.assertEqual(len(animation3d.PILOT_3D),6)
         self.assertEqual([s['visual'] for s in animation3d.PILOT_3D],['key','letter','building','door','portrait','photo'])
         self.assertTrue(animation3d.PILOT_3D[-1]['text'].endswith('Continua.'))
+
+    def test_speech_energy_follows_voice_and_settles_back_to_silence(self):
+        audio=core.DATA/'voice.wav';rate=12000
+        samples=array('h',[0]*rate+[round(10000*math.sin(2*math.pi*180*n/rate)) for n in range(rate)]+[0]*rate)
+        with wave.open(str(audio),'wb') as stream:
+            stream.setnchannels(1);stream.setsampwidth(2);stream.setframerate(rate);stream.writeframes(samples.tobytes())
+        envelope=animation3d.speech_energy(audio,12)
+        self.assertEqual(len(envelope),36)
+        self.assertEqual(max(envelope[:12]),0)
+        self.assertGreater(max(envelope[12:24]),.9)
+        self.assertLess(envelope[-1],.001)
+        self.assertTrue(all(0<=v<=1 for v in envelope))

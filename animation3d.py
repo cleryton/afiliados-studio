@@ -1,5 +1,6 @@
 """Render an original 3D pilot locally with an explicitly selected Blender binary."""
 import argparse
+from array import array
 import hashlib
 import json
 import math
@@ -43,7 +44,7 @@ def preview_state():
         if not 0<duration<=180:return None
         return {'id':identifier,'title':'A chave do 12 — piloto em animação 3D','duration':duration,
             'video_url':f"/stories/{identifier}/video.mp4?v={preview.get('sha256','')}",
-            'poster_url':f'/stories/{identifier}/poster.png','mouth_alignment':'procedural_not_phoneme_aligned'}
+            'poster_url':f'/stories/{identifier}/poster.png','mouth_alignment':meta.get('mouth_alignment','procedural_not_phoneme_aligned')}
     except (OSError,ValueError,TypeError,AttributeError,KeyError):return None
 
 
@@ -76,18 +77,52 @@ def narration(scenes, folder):
     return durations
 
 
-def render_pilot(blender=None, offer=None, width=540, height=960, samples=12, engine='BLENDER_EEVEE_NEXT',fps=12):
+def speech_energy(audio,fps):
+    """Amplitude timing only, not speech recognition or phoneme alignment."""
+    with wave.open(str(audio)) as stream:
+        if stream.getsampwidth()!=2:raise ValueError('Áudio deve ser PCM de 16 bits.')
+        rate=stream.getframerate();channels=stream.getnchannels();values=array('h',stream.readframes(stream.getnframes()))
+    if sys.byteorder!='little':values.byteswap()
+    step=max(1,round(rate/fps))*channels
+    levels=[math.sqrt(sum(float(v)**2 for v in values[i:i+step])/max(1,len(values[i:i+step]))) for i in range(0,len(values),step)]
+    reference=max(200,sorted(levels)[round((len(levels)-1)*.90)] if levels else 200)
+    previous=0;output=[]
+    for level in levels:
+        target=min(1,max(0,(level-100)/reference));weight=.75 if target>previous else .55
+        previous=previous*(1-weight)+target*weight;output.append(round(previous,4))
+    return output
+
+
+def render_pilot(blender=None, offer=None, width=540, height=960, samples=12, engine='BLENDER_EEVEE_NEXT',fps=12,reuse_id=None):
     import imageio_ffmpeg
     blender=find_blender(blender);identifier=uuid4().hex
     original_data=core.DATA
     package=original_data/'story-3d'/identifier;package.mkdir(parents=True)
     durations=narration(PILOT_3D,package)
-    configurations=[]
+    configurations=[];cached={}
+    if reuse_id:
+        if not re.fullmatch('[a-f0-9]{32}',reuse_id):raise ValueError('Piloto anterior inválido.')
+        prior=original_data/'story-3d'/reuse_id
+        prior_meta=json.loads((original_data/'stories'/reuse_id/'roteiro.json').read_text(encoding='utf-8'))
+        if prior_meta.get('rendered_size')!=[width,height] or prior_meta.get('native_animation_fps')!=fps:
+            raise ValueError('Use a mesma resolução e taxa do piloto anterior ou gere todas as cenas novamente.')
+        if [s['text'] for s in prior_meta['scenes'][:6]]!=[s['text'] for s in PILOT_3D]:
+            raise ValueError('O roteiro mudou. Gere todas as cenas novamente.')
+        manifest=json.loads((prior/'workspace'/'story-clips'/'manifest.json').read_text(encoding='utf-8'))
+        for i in range(5):
+            folder=prior/f'scene-{i+1}';state=json.loads((folder/'motion-state.json').read_text(encoding='utf-8'))
+            clip=prior/'workspace'/'story-clips'/f'episode-1-scene-{i+1}.mp4'
+            if (state['fps']!=fps or abs(state['frames']/fps-durations[i])>1/fps or
+                hashlib.sha256(clip.read_bytes()).hexdigest()!=manifest[f'1:{i+1}']['sha256']):raise ValueError('O trecho anterior mudou. Faça uma geração 3D completa.')
+            cached[i]={'clip':clip,'folder':folder,'entry':manifest[f'1:{i+1}']}
     for index,(scene,duration) in enumerate(zip(PILOT_3D,durations)):
+        if index in cached:continue
         configurations.append({'kind':scene['visual'],'episode':1,'duration':duration,'width':width,'height':height,
-            'assets':str(core.ROOT/'assets'/'story-pilot'),'output':str(package/f'scene-{index+1}'),'samples':samples,'engine':engine,'fps':fps})
+            'assets':str(core.ROOT/'assets'/'story-pilot'),'output':str(package/f'scene-{index+1}'),'samples':samples,'engine':engine,'fps':fps,
+            'speech_envelope':speech_energy(package/f'narration-{index}.wav',fps),
+            'speaking_range':[0,.62] if scene['visual']=='photo' else [.50,1]})
     config=package/'render-config.json';config.write_text(json.dumps({'jobs':configurations},ensure_ascii=False),encoding='utf-8')
-    print(json.dumps({'stage':'rendering_3d','id':identifier,'scenes':6,'duration':sum(durations)}),flush=True)
+    print(json.dumps({'stage':'rendering_3d','id':identifier,'scenes':6,'cached_scenes':len(cached),'duration':sum(durations)}),flush=True)
     # Keep native render progress in a private local log. Nothing is uploaded.
     with (package/'blender.log').open('wb') as log:
         result=subprocess.run([str(blender),'--background','--factory-startup','--python-exit-code','1','--python',
@@ -100,6 +135,11 @@ def render_pilot(blender=None, offer=None, width=540, height=960, samples=12, en
     workspace=package/'workspace';clips=workspace/'story-clips';clips.mkdir(parents=True)
     manifest={};states=[];exe=imageio_ffmpeg.get_ffmpeg_exe()
     for index,(scene,duration) in enumerate(zip(PILOT_3D,durations)):
+        if index in cached:
+            item=cached[index];folder=package/f'scene-{index+1}';folder.mkdir()
+            for name in ('scene.blend','motion-state.json'):shutil.copy2(item['folder']/name,folder/name)
+            states.append(json.loads((folder/'motion-state.json').read_text(encoding='utf-8')))
+            shutil.copy2(item['clip'],clips/item['clip'].name);manifest[f'1:{index+1}']=item['entry'];continue
         folder=package/f'scene-{index+1}';state=json.loads((folder/'motion-state.json').read_text(encoding='utf-8'));states.append(state)
         frames=list(folder.glob('frame-*.png'))
         if len(frames)!=round(duration*fps) or not (folder/'scene.blend').is_file():raise ValueError('Quadros 3D incompletos.')
@@ -121,7 +161,7 @@ def render_pilot(blender=None, offer=None, width=540, height=960, samples=12, en
     for name in ('video.mp4','poster.png','legenda.txt','legendas.srt','roteiro.json'):shutil.copy2(source/name,target/name)
     meta=json.loads((target/'roteiro.json').read_text(encoding='utf-8'))
     meta.update({'animation_type':'original_procedural_3d','character_animation':True,'native_project_format':'Blender',
-        'mouth_alignment':'procedural_not_phoneme_aligned','rendered_size':[width,height],'native_animation_fps':fps,
+        'mouth_alignment':'audio_energy_on_revelation_not_phoneme_aligned','rendered_size':[width,height],'native_animation_fps':fps,
         'motion_states':states,'image_generation':'The only raster AI asset is the fictional photograph held as a prop.'})
     (target/'roteiro.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
     caption=(target/'legenda.txt').read_text(encoding='utf-8')
@@ -129,7 +169,7 @@ def render_pilot(blender=None, offer=None, width=540, height=960, samples=12, en
     (target/'legenda.txt').write_text(caption,encoding='utf-8')
     preview={'id':identifier,'title':'A chave do 12 — piloto em animação 3D','duration':result['duration'],
         'width':720,'height':1280,'native_render_size':[width,height],'character_animation':True,
-        'mouth_alignment':'procedural_not_phoneme_aligned','sha256':meta['sha256'],'ready':True}
+        'mouth_alignment':'audio_energy_on_revelation_not_phoneme_aligned','sha256':meta['sha256'],'ready':True}
     if offer:
         import story_offers
         if not story_offers.current(offer):raise ValueError('A oferta perdeu autorização. A prévia anterior foi preservada.')
@@ -146,6 +186,7 @@ def main():
     parser.add_argument('--width',type=int,default=540);parser.add_argument('--height',type=int,default=960)
     parser.add_argument('--samples',type=int,default=12)
     parser.add_argument('--fps',type=int,choices=(12,24),default=12)
+    parser.add_argument('--reuse-pilot',help='Reaproveita cinco trechos locais verificados e melhora a cena final.')
     parser.add_argument('--engine',choices=('BLENDER_EEVEE_NEXT','BLENDER_WORKBENCH'),default='BLENDER_EEVEE_NEXT')
     args=parser.parse_args();offer=None
     if args.with_current_offer:
@@ -155,7 +196,7 @@ def main():
         if not offer or not story_offers.current(offer):raise ValueError('Uma oferta ativa e autorizada é necessária.')
     if (not 240<=args.width<=1080 or not 426<=args.height<=1920 or abs(args.width/args.height-9/16)>.005 or not 1<=args.samples<=64):
         raise ValueError('Use resolução vertical 9:16 e entre 1 e 64 amostras.')
-    render_pilot(args.blender,offer,args.width,args.height,args.samples,args.engine,args.fps)
+    render_pilot(args.blender,offer,args.width,args.height,args.samples,args.engine,args.fps,args.reuse_pilot)
 
 
 if __name__=='__main__':main()

@@ -1,5 +1,12 @@
 # Alterações
 
+## 0.17.0-beta — 25/10/2026
+
+- Cena da revelação em 3D com abertura da boca e expressão acompanhando a intensidade da voz; continua sem alinhamento por fonema. Reaproveitamento de cinco clipes locais verificados, preservando projetos e a prévia anterior até concluir.
+- Integração opcional com Upload-Post, chave protegida pelo Windows, perfil confirmado por identificador estável, agenda local e marcações de publicidade/IA. O plano gratuito observado bloqueou a conexão TikTok; nenhum plano pago é contratado pelo aplicativo.
+- Fila persistente com idempotência, limites de um pedido diário e dez mensais, verificação de materiais e conta, retenção de alterações e consulta de pedidos incertos sem repetir upload. Rascunho não é publicação confirmada.
+- Painel distingue conexão, ativação, reserva local e confirmação pública. Acesso direto à configuração pelo link `?setup=publishing#stories`, com foco no campo protegido. Modo tester bloqueia operações externas.
+
 ## 0.16.0-beta — 25/10/2026
 
 - Piloto original em animação 3D local com Blender: atores modelados, braços articulados, cabeça, olhos, objetos, câmera e porta em movimento. Projetos nativos com animações gravadas e fotografia incorporada.
