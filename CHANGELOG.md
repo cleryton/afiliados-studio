@@ -1,5 +1,12 @@
 # Alterações
 
+## 0.16.0-beta — 25/10/2026
+
+- Piloto original em animação 3D local com Blender: atores modelados, braços articulados, cabeça, olhos, objetos, câmera e porta em movimento. Projetos nativos com animações gravadas e fotografia incorporada.
+- Geração opcional de seis trechos, narração e legendas, com publicidade autorizada separada da ficção. Prévia completa exibida no painel, preservando episódios existentes e publicações externas.
+- Exportação registra resolução e taxa originais, gestos procedurais e boca sem alinhamento por fonema. Geração interrompida não substitui a prévia pronta anterior.
+- Testes de disponibilização da prévia, arquivos incompletos, caminhos inválidos e retirada da autorização comercial. Sem serviços pagos ou instalação automática do Blender pelo aplicativo.
+
 ## 0.15.0-beta — 25/10/2026
 
 - Montagem local com tomadas de até quatro segundos, planos de reação e detalhes; objetos fotográficos com transparência animados separadamente do fundo, sem reiniciar a câmera nas trocas de legenda.

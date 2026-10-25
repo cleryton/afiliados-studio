@@ -8,7 +8,11 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** fontes na versão 0.15.0-beta. Geração local, envio privado e uma publicação pública com link de afiliado foram confirmados pela API do YouTube em canal real. Isso não comprova vendas ou comissões. Postagem pública automática no TikTok continua sem integração configurada. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** fontes na versão 0.16.0-beta. Geração local, envio privado e uma publicação pública com link de afiliado foram confirmados pela API do YouTube em canal real. Isso não comprova vendas ou comissões. Postagem pública automática no TikTok continua sem integração configurada. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+
+## Animação 3D local
+
+A versão 0.16 acrescenta um piloto curto com personagens e cenário modelados em 3D, gestos articulados, expressões e porta em movimento, produzido localmente com Blender. Quando concluído, ele aparece em **Histórias no TikTok → Novo · Animação 3D**. O movimento da boca é aproximado; não há alinhamento por fonema, caminhada ou criação contínua de temporadas. A geração usa um comando próprio, separado da fila comum. Veja [Animação 3D](docs/ANIMACAO_3D.md).
 
 ## Histórias no TikTok
 

@@ -340,3 +340,10 @@ Em um episódio pronto, clique em **Remontar com cortes e movimento**. Deve entr
 Assista ao arquivo novo: tomadas de até quatro segundos, planos gerais e reações, chave girando, carta deslizando do envelope, fotografia se movendo e abertura de porta nas cenas correspondentes. As legendas devem ficar estáveis e suas trocas não devem reiniciar a câmera. Os personagens continuam em imagens; não avaliar como animação corporal ou sincronização labial. Confira narração inteligível e efeitos suaves.
 
 Confira a publicidade e o link de afiliado preservados, o formato vertical e o registro da montagem em roteiro.json. Para testar clipes próprios, use somente um padrão sintético ou material autorizado no ambiente tester e siga [CENAS_EM_MOVIMENTO.md](CENAS_EM_MOVIMENTO.md). Alterar o arquivo sem atualizar sua autorização deve interromper a montagem e preservar o MP4 anterior. Nenhum destes testes publica em redes sociais.
+
+
+## 24. Prévia de animação 3D
+
+Antes de gerar, a tela não deve declarar um vídeo 3D pronto. Depois de uma geração completa, confira a seção Novo · Animação 3D em 1440 e 390 px, o botão de download com foco visível e a reprodução sem reiniciar durante atualizações. A prévia deve apresentar personagens com volume, braços e cabeça em movimento, gestos e porta articulada. Não avaliar como caminhada ou sincronização labial precisa, que não estão implementadas.
+
+Os episódios antigos continuam separados e nenhum envio externo ocorre. Com oferta demonstrativa no tester, conferir publicidade separada, link ilustrativo preservado e ausência de depoimentos. Arquivo incompleto ou produto com autorização retirada não deve produzir uma prévia pronta no painel. Geração 3D é opcional e exige Blender; veja ANIMACAO_3D.md.

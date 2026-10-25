@@ -1,5 +1,7 @@
 # Contrato de interface
 
+Animação 3D 0.16: exibir uma seção separada somente após renderização completa. Prévia vertical e download com rótulo próprio, descrição de gestos e boca aproximada, sem afirmar geração contínua ou postagem. Os episódios anteriores mantêm seus controles. Verificar vídeo, foco, rolagem, ausência de prévia e largura em 1440 e 390 px.
+
 Montagem 0.15: em episódios prontos, Remontar com cortes e movimento coloca somente aquele episódio na fila local. Explicar que não publica nem altera o TikTok. Ocultar o botão quando não há prévia válida, durante geração ou oferta desatualizada. Usar componentes atuais, foco de teclado e estados em 1440 e 390 px. Texto da introdução distingue objetos animados, clipes próprios e personagens ainda sem atuação corporal.
 
 Histórias com oferta: selecionar produto já autorizado e confirmar características acrescenta um bloco neutro de publicidade ao final dos episódios, separado dos atores fictícios. Exibir qual produto está vinculado, vínculo atualizado ou pendente, link preservado na legenda e ausência de confirmação de vendas. Alterar produto invalida as versões prontas e coloca a fila local para remontar; cliques repetidos com a mesma oferta não duplicam arquivos. Perfil TikTok indicado é distinto de conexão de publicação; login no navegador não equivale à API. Não prometer link clicável na bio. Validar formulários e estados de oferta desatualizada em desktop/celular.

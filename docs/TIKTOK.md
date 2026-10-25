@@ -35,3 +35,8 @@ A [documentação oficial da API direta](https://developers.tiktok.com/docs/en/c
 O [Buffer oferece API inclusive no plano Free](https://buffer.com/api). Entretanto, na [referência consultada](https://developers.buffer.com/reference), o input de metadados de TikTok documenta indicação de conteúdo gerado por IA e título; não confirmei um controle de identificação comercial que permita fechar o fluxo automático de afiliados. Essa é a razão para manter o envio atual como rascunho, sem prometer postagem pública automática.
 
 Não é necessário contratar serviços pagos nem criar um aplicativo de desenvolvedor para testar a geração local. O primeiro teste de conta e publicação deve acontecer depois de existir uma integração compatível confirmada, ou pela conclusão manual no próprio TikTok. Não há promessa de aprovação da integração, alcance ou vendas.
+
+
+## Prévia em animação 3D — versão 0.16
+
+A geração opcional com Blender acrescenta uma prévia separada no painel, com personagens modelados e gestos, objetos e câmera animados. Ela adapta o primeiro episódio em formato curto e não substitui publicações ou a fila anterior. A boca tem movimento aproximado, sem sincronização por fonema. Veja [ANIMACAO_3D.md](ANIMACAO_3D.md) para produção, limitações e projetos editáveis.
