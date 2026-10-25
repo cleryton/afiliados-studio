@@ -142,7 +142,7 @@ def public_url(value, resolve=False):
 
 def platform_for(url):
     host = urlparse(url).hostname.lower()
-    for domain, label in [('amazon.com.br', 'Amazon'), ('amazon.com', 'Amazon'), ('amzn.to', 'Amazon'), ('mercadolivre.com.br', 'Mercado Livre'), ('mercadolivre.com', 'Mercado Livre'), ('mercadolibre.com', 'Mercado Livre'), ('meli.la', 'Mercado Livre'), ('shopee.com.br', 'Shopee'), ('shope.ee', 'Shopee'), ('hotmart.com', 'Hotmart'), ('kiwify.com.br', 'Kiwify'), ('eduzz.com', 'Eduzz'), ('aliexpress.com', 'AliExpress')]:
+    for domain, label in [('amazon.com.br', 'Amazon'), ('amazon.com', 'Amazon'), ('amzn.to', 'Amazon'), ('mercadolivre.com.br', 'Mercado Livre'), ('mercadolivre.com', 'Mercado Livre'), ('mercadolibre.com', 'Mercado Livre'), ('meli.la', 'Mercado Livre'), ('shopee.com.br', 'Shopee'), ('shope.ee', 'Shopee'), ('hotmart.com', 'Hotmart'), ('kiwify.com.br', 'Kiwify'), ('kiwify.com', 'Kiwify'), ('eduzz.com', 'Eduzz'), ('aliexpress.com', 'AliExpress')]:
         if host == domain or host.endswith('.' + domain):
             return label
     return 'Outra plataforma'

@@ -307,3 +307,13 @@ Com produto autorizado e operação pública ativa, aguarde o vídeo ficar pront
 T64 tem efeito real e só deve ser executado em um canal autorizado para publicação pública. A suíte usa respostas simuladas para testar visibilidade, identificação comercial, expiração, troca de canal, roteiro alterado e perda da resposta. Não provoque falhas de rede em um upload real. Se a API não confirmar visibilidade pública, confira o vídeo no YouTube Studio; o aplicativo não trata a ausência de confirmação como sucesso.
 
 Retornos antigos de autorização Google não devem marcar um canal já conectado como expirado. “Verificar acesso ao YouTube” consulta o acesso real, sem publicar nem desconectar a conta.
+
+## 21. Começar pela Kiwify
+
+Na etapa 01 de Começar, **Abrir Kiwify** leva ao login oficial. O titular conclui pessoalmente o cadastro, o aceite dos termos e a validação solicitada. No painel da Kiwify, use **Marketplace** para encontrar produtos e solicitar afiliação. A aprovação depende do produtor.
+
+A afiliação pode aparecer ativa antes de o cadastro estar completo. Se a aba Links pedir completar o cadastro, o titular precisa concluir essa etapa na Kiwify para liberar os links.
+
+Depois da aprovação e do cadastro completo, use **Produtos → Minhas afiliações → Links** e cadastre seu link no estúdio com as características verificadas do produto. Convites de afiliação, links de outras pessoas e exemplos não são o seu link de divulgação. A identificação da plataforma Kiwify no cadastro não comprova aprovação ou atribuição de comissão.
+
+No modo tester, use somente os exemplos locais; não conclua afiliações nem envios reais para testar esse atalho. A geração e o envio ao YouTube continuam sujeitos às verificações já descritas no manual.

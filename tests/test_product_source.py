@@ -7,6 +7,12 @@ import product_source
 
 
 class ProductSourceTests(unittest.TestCase):
+    def test_kiwify_domains_are_identified_without_accepting_lookalikes(self):
+        for host in ('kiwify.com','dashboard.kiwify.com','pay.kiwify.com','kiwify.com.br','pay.kiwify.com.br'):
+            self.assertEqual(core.platform_for('https://'+host+'/produto?afid=fixture'),'Kiwify')
+        for host in ('kiwify.com.example.com','notkiwify.com','kiwify.com.br.example.com'):
+            self.assertEqual(core.platform_for('https://'+host+'/produto'),'Outra plataforma')
+
     def extract(self, value):
         return product_source.single_product([json.dumps(value)])
 

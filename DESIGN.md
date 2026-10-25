@@ -1,5 +1,7 @@
 # Contrato de interface
 
+Kiwify: a etapa 01 de Começar oferece Abrir Kiwify e explica Marketplace → aprovação → Produtos / Minhas afiliações / Ver links. Nenhum clique declara aprovação ou cria conta no serviço. Preservar as demais etapas e o bloqueio sem produto autorizado. Conferir link, foco e texto em 1440x900 e 390x844, usando os componentes atuais.
+
 Publicar hoje: na fila de revisão, vídeo automático pronto e verificado oferece Publicar agora no YouTube somente com canal conectado, rotina pública ativa e produto autorizado. O clique identifica a publicação pública deste único vídeo; o estado posterior é solicitado ou aguardando confirmação, nunca publicado sem resposta do destino. Não altera outros horários nem repete upload. No tester e com pendências, mostrar motivo e próxima ação. Usar os componentes atuais, conferir foco, mensagens longas e telas 1440x900 e 390x844.
 
 Continuidade 0.12: início normal executa em segundo plano e pode abrir ao entrar no Windows; mostrar essa condição sem afirmar conexão ou publicação. Teste privado pronto com credencial importada oferece Conectar e testar em privado, com explicação de que o consentimento Google inicia somente esse vídeo privado. Não ativar produção pública. Preservar conexão sem teste pelo botão da etapa 02, bloqueio no tester e estados de falha/retomada. Conferir em 1440x900 e 390x844.
