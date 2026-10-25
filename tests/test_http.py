@@ -87,6 +87,13 @@ class HTTPTests(unittest.TestCase):
         create.assert_called_once()
         self.assertEqual(self.request('/stories/'+'a'*32+'/speech-0.wav')[0],404)
 
+    def test_story_growth_record_is_local_and_csrf_protected(self):
+        import story_growth
+        self.assertEqual(self.request('/api/stories/growth/record',{})[0],403)
+        with patch.object(story_growth,'record',return_value={'ok':True}) as record,patch.object(core,'TESTER',True):
+            self.assertEqual(self.request('/api/stories/growth/record',{'views':0},{'X-Studio-Token':app.TOKEN})[0],200)
+        record.assert_called_once_with({'views':0})
+
     def test_story_offer_and_profile_require_csrf(self):
         import story_offers,stories
         for path in ('/api/stories/offer','/api/stories/profile'):

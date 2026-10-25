@@ -51,6 +51,22 @@ class Animation3DTests(unittest.TestCase):
     def test_missing_blender_fails_without_download_or_publication(self):
         with self.assertRaises(ValueError):animation3d.find_blender(core.DATA/'not-installed.exe')
 
+    def test_preview_exposes_correct_chapter_and_rejects_invalid_numbers(self):
+        pointer,folder,metadata=self.fixture()
+        for number in (2,3):
+            (folder/'roteiro.json').write_text(json.dumps({**metadata,'episode':number}),encoding='utf-8')
+            self.assertEqual(animation3d.preview_state()['number'],number)
+            self.assertIn(f'capítulo {number}',animation3d.preview_state()['title'])
+        for number in (0,4,True,'2'):
+            (folder/'roteiro.json').write_text(json.dumps({**metadata,'episode':number}),encoding='utf-8')
+            self.assertIsNone(animation3d.preview_state())
+
+    def test_invalid_chapter_or_cache_reuse_stops_before_render(self):
+        with patch.object(animation3d,'find_blender') as blender:
+            with self.assertRaises(ValueError):animation3d.render_pilot(number=4)
+            with self.assertRaises(ValueError):animation3d.render_pilot(number=2,reuse_id='a'*32)
+        blender.assert_not_called()
+
     def test_story_has_original_short_scenes_and_cliffhanger(self):
         self.assertEqual(len(animation3d.PILOT_3D),6)
         self.assertEqual([s['visual'] for s in animation3d.PILOT_3D],['key','letter','building','door','portrait','photo'])

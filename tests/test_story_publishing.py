@@ -46,6 +46,18 @@ class PublishingTests(unittest.TestCase):
         rows=sorted(publishing.state()['jobs'],key=lambda row:row['due_at'])
         self.assertEqual(rows[0]['due_at'][:10],'2026-10-25');self.assertEqual(rows[1]['due_at'][:10],'2026-10-26')
 
+    def test_native_3d_chapters_have_distinct_logical_keys_but_versions_do_not(self):
+        import animation3d
+        media=self.media();folder=core.DATA/'stories'/media
+        with core.db() as c:c.execute('DELETE FROM story_episodes WHERE id=?',(media,))
+        meta=json.loads((folder/'roteiro.json').read_text(encoding='utf-8'))
+        with patch.object(animation3d,'preview_state',return_value={'id':media}):
+            for number in (1,2,3):
+                (folder/'roteiro.json').write_text(json.dumps({**meta,'episode':number}),encoding='utf-8')
+                self.assertEqual(publishing.media_snapshot(media)['content_key'],f'3d:a-chave-do-12:{number}')
+            (folder/'roteiro.json').write_text(json.dumps({**meta,'episode':4}),encoding='utf-8')
+            with self.assertRaises(ValueError):publishing.media_snapshot(media)
+
     def test_success_requires_real_destination_url_and_no_fallback(self):
         good={'results':{'tiktok':{'success':True,'url':'https://www.tiktok.com/@novelitas0213/video/12345'}}}
         self.assertEqual(publishing.publication_result(good,BINDING)[0],'published')

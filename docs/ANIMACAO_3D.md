@@ -6,7 +6,7 @@ O estilo é de bonecos 3D. Ombros, cotovelos, cabeça e olhos têm movimentos pr
 
 ## Assistir
 
-Após uma geração concluída, **Histórias no TikTok** exibe **Novo · Animação 3D**, com reprodução e download. Essa prévia é uma adaptação curta do episódio inicial. Os episódios já existentes e as publicações do TikTok continuam com suas versões; criar uma prévia não publica nem substitui um vídeo remoto.
+Após uma geração concluída, **Histórias no TikTok** exibe **Novo · Animação 3D**, com reprodução e download. Essa prévia mostra o último capítulo 3D concluído. Sem a opção de capítulo, a geração continua usando a adaptação do episódio inicial. Os episódios já existentes e as publicações do TikTok continuam com suas versões; criar uma prévia não publica nem substitui um vídeo remoto.
 
 Quando solicitada com oferta, a publicidade usa o produto ativo e autorizado, em um bloco final separado dos personagens. O link fica na descrição. O produto e seus dados são novamente conferidos antes de disponibilizar a prévia. Não há resultados de venda presumidos.
 
@@ -38,3 +38,7 @@ A fila comum de três episódios ainda usa a montagem anterior. O piloto 3D é g
 ## Melhoria da revelação — versão 0.17
 
 A cena final pode usar a intensidade medida no áudio para abrir a boca e mover a expressão de Eva durante sua fala. Continua sem reconhecimento de palavras ou sincronização por fonema. Para reaproveitar cinco clipes anteriores com hash, roteiro, resolução e taxa conferidos, use `--reuse-pilot ID_DO_PILOTO_ANTERIOR` junto das opções normais. Essa opção remonta a oferta e a cena final, preservando a prévia anterior até terminar. Reaproveitar cenas não gera um novo capítulo para publicação.
+
+## Continuação curta — versão 0.18
+
+`--episode 2` e `--episode 3` criam os próximos capítulos originais com os mesmos atores. Usam conflito na primeira frase e publicidade final resumida. `--reuse-pilot` continua restrito ao capítulo 1. A última prévia passa a mostrar o capítulo gerado; arquivos anteriores permanecem no notebook. Veja [Conteúdo e resultados](ENGAJAMENTO_TIKTOK.md).

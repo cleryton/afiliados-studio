@@ -1,5 +1,11 @@
 # Alterações
 
+## 0.18.0-beta — 25/10/2026
+
+- Continuação 3D original nos capítulos 2 e 3, com conflito na abertura, legenda própria, pergunta sobre a história e bloco comercial final mais breve. Mantém link, publicidade e identificação de IA.
+- Painel de métricas informado pelo titular: observações por vídeo, campos desconhecidos distintos de zero, taxas somente com denominadores disponíveis e sem somar contagens acumuladas. Links restritos ao perfil indicado e datas futuras recusadas.
+- Roteiros apresentados como hipóteses, sem horário vencedor ou crescimento presumido. Formulário preserva preenchimento durante atualização de andamento. Manual do tester e testes de validação, retenção, continuidade e chaves de capítulo.
+
 ## 0.17.0-beta — 25/10/2026
 
 - Cena da revelação em 3D com abertura da boca e expressão acompanhando a intensidade da voz; continua sem alinhamento por fonema. Reaproveitamento de cinco clipes locais verificados, preservando projetos e a prévia anterior até concluir.

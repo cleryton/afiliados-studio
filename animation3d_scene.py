@@ -241,7 +241,8 @@ def build(config):
         if character not in visible:character['root'].location.x=50
     key=key_prop()
     letter=empty('Letter prop');box('Envelope',(0,0,0),(.52,.045,.34),C['paper'],letter,.025)
-    text_obj('Vá sozinha.' if episode==1 else 'Uma carta para cada filha.',(0,-.027,-.015),.055 if episode==1 else .033,C['dark'],letter)
+    letter_text=config.get('letter_text') or ('Vá sozinha.' if episode==1 else 'Uma carta para cada filha.')
+    text_obj(letter_text,(0,-.027,-.015),.055 if episode==1 else .029,C['burgundy'] if config.get('letter_text') else C['dark'],letter)
     photo=empty('Photograph prop');box('Photo print',(0,0,0),(.55,.028,.39),C['paper'],photo,.008)
     image_path=Path(config['assets'])/'photo-prop.png'
     image=bpy.data.images.load(str(image_path));image.pack()

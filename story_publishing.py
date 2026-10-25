@@ -92,7 +92,9 @@ def media_snapshot(identifier,allow_archive=False):
     if offer and (offer['url'] not in caption or 'PUBLICIDADE' not in caption.upper()):raise ValueError('A legenda precisa preservar o link e a publicidade.')
     digest=hashlib.sha256((folder/'video.mp4').read_bytes()).hexdigest()
     if digest!=meta.get('sha256'):raise ValueError('O MP4 mudou após a validação. Gere novamente.')
-    content=f"fiction:{row['series_id']}:{row['number']}" if row else '3d:a-chave-do-12:1'
+    number=meta.get('episode',1)
+    if type(number) is not int or number not in (1,2,3):raise ValueError('Capítulo 3D inválido.')
+    content=f"fiction:{row['series_id']}:{row['number']}" if row else f'3d:a-chave-do-12:{number}'
     return {'path':folder/'video.mp4','hash':digest,'caption':caption,'caption_hash':hashlib.sha256(caption.encode()).hexdigest(),
             'offer':offer,'content_key':content}
 

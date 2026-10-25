@@ -50,8 +50,10 @@ def attach(payload):
     return {'ok':True,'existing':False}
 
 
-def scenes(offer):
+def scenes(offer,brief=False):
     if not offer:return []
+    if brief:
+        return [{'visual':'offer','text':f"Publicidade. Conheça {offer['name']}. Link de afiliado na descrição. Posso receber comissão por compras elegíveis."}]
     facts=' '.join(offer['facts'][:2])
     return [{'visual':'offer','text':f"Publicidade. Conheça {offer['name']}. {facts}"},
             {'visual':'offer','text':'O link de afiliado está na descrição para copiar e abrir no navegador. Posso receber comissão por compras elegíveis. Confira as condições antes de comprar.'}]

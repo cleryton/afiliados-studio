@@ -28,6 +28,8 @@ def init():
     story_offers.init()
     import story_publishing
     story_publishing.init()
+    import story_growth
+    story_growth.init()
 
 
 def create_pilot():
@@ -61,7 +63,9 @@ def state():
     assets_ready=all(asset_path(name).is_file() for name in ('discovery.png','corridor.png','sisters.png'))
     assets_ready=assets_ready and all((core.ROOT/'assets'/'story-pilot'/name).is_file() for name in ('key-prop.png','envelope-prop.png','photo-prop.png'))
     publishing=story_publishing.state()
-    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'publishing':publishing,'publishing_connected':publishing['connected'],'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
+    import story_growth
+    offer=next((row['offer'] for row in episodes if row['offer'] and row['offer_current']),None)
+    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'publishing':publishing,'growth':story_growth.state(offer),'publishing_connected':publishing['connected'],'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
             'destination':'TikTok','notice':'Criação local de ficção. Confira a conexão e os pedidos na seção de postagem. Nenhum episódio desta fila é enviado ao YouTube ou a contas pessoais.'}
 
 

@@ -8,7 +8,11 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** fontes na versão 0.17.0-beta. Geração local, envio privado e uma publicação pública com link de afiliado foram confirmados pela API do YouTube em canal real. Isso não comprova vendas ou comissões. Postagem pública automática no TikTok continua sem integração configurada. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** fontes na versão 0.18.0-beta. Geração local de histórias e agendamento nativo de uma versão 3D no TikTok Studio foram conferidos em conta do projeto. Isso não comprova alcance, vendas ou comissões. O YouTube pessoal e a rotina antiga de afiliados permanecem desativados nesta operação. A postagem automática por integração TikTok continua pendente de acesso compatível. Ofertas comerciais exigem afiliação aprovada e link próprio; lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+
+## Conteúdo e resultados do TikTok
+
+A versão 0.18 acrescenta roteiros curtos dos capítulos 2 e 3 em 3D, com conflito na abertura, continuidade e publicidade final mais breve. O painel permite registrar visualizações, interações e retenção reais, preservando dados indisponíveis e comparando a última observação de cada vídeo. A coleta ainda é manual, sem melhor horário ou crescimento presumidos. Veja [Conteúdo e resultados](docs/ENGAJAMENTO_TIKTOK.md).
 
 ## Postagem das histórias
 

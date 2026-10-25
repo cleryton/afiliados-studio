@@ -70,7 +70,7 @@ def render(episode):
     import imageio_ffmpeg
     import story_offers
     offer=episode.get('offer')
-    scenes=json.loads(episode['scenes'])+story_offers.scenes(offer);directory=core.DATA/'stories'/episode['id'];directory.mkdir(parents=True,exist_ok=True)
+    scenes=json.loads(episode['scenes'])+story_offers.scenes(offer,brief=episode.get('offer_style')=='brief');directory=core.DATA/'stories'/episode['id'];directory.mkdir(parents=True,exist_ok=True)
     exe=imageio_ffmpeg.get_ffmpeg_exe();durations=[];voice=[];segments=[]
     run_options={'check':True,'capture_output':True,'timeout':180,'creationflags':getattr(subprocess,'CREATE_NO_WINDOW',0)}
     try:
@@ -125,7 +125,7 @@ def render(episode):
         (directory/'legenda.txt').write_text(caption,encoding='utf-8')
         (directory/'legendas.srt').write_text(creative.srt(cards),encoding='utf-8')
         (directory/'roteiro.json').write_text(json.dumps({'title':episode['series_title'],'episode':episode['number'],'scenes':scenes,
-            'duration':duration,'voice':all(voice),'ai_images':True,'offer':offer,'image_generation':'Prepared separately; no automatic image service connected.',
+            'duration':duration,'voice':all(voice),'ai_images':True,'offer':offer,'offer_style':episode.get('offer_style','full'),'image_generation':'Prepared separately; no automatic image service connected.',
             'subtitle_timing':'estimated_by_text','editing_style':story_motion.STYLE,
             'character_animation':False,'sound_design':'original_local_synthesis',
             'shot_timeline':[{'scene':i,'source':'authorized_video' if clips[i] else 'local_composite',

@@ -354,3 +354,7 @@ Os episódios antigos continuam separados e nenhum envio externo ocorre. Com ofe
 No tester, o formulário de conexão e os endpoints de conexão, ativação e fila externa devem estar bloqueados. Não use chaves reais para testar. O painel distingue conexão cadastrada, rotina pausada, agenda local e resposta do destino. Confira 1440 e 390 px, foco do link `?setup=publishing#stories`, entrada de senha protegida e preservação do formulário durante a atualização. A chave deve ser apagada do campo após uma tentativa de conexão, inclusive com erro.
 
 A suíte simula perda de resposta, troca da identificação estável da conta, legenda e vídeo modificados, envio como rascunho, aviso de IA/publicidade, cota e restrição de plano. Nenhum desses testes publica. A confirmação real exige provedor e canal autorizados e link retornado para o perfil esperado. Veja POSTAGEM_TIKTOK.md.
+
+## Conteúdo e resultados (0.18)
+
+Consulte [o roteiro de teste de engajamento](ENGAJAMENTO_TIKTOK.md): métricas locais com desconhecidos distintos de zero, validação do perfil e da data, persistência e prévia do capítulo 2 em 3D. Nenhuma sugestão editorial comprova aumento de alcance.
