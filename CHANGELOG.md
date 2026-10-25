@@ -1,5 +1,14 @@
 # Alterações
 
+## 0.14.0-beta — 24/10/2026
+
+- Oferta opcional de afiliado vinculada a produto ativo e autorizado, com publicidade separada da ficção, link preservado e verificação de mudanças nos dados. Perfil de destino indicado sem fingir autenticação ou publicação automática.
+
+- Área Histórias no TikTok com minissérie original de três episódios e desfecho, separada dos produtos e envios de afiliados.
+- Imagens realistas de personagens fictícios preparadas com IA; montagem local vertical com movimento de câmera, narração pt-BR, identificação de ficção/IA e legendas por trechos.
+- Fila local sem duplicação do piloto, retomada após reinício, prévias e downloads MP4/SRT/legenda. Não conecta nem publica no TikTok; geração contínua de imagens e novas temporadas permanece indisponível.
+- Testes de fila, separação de produtos, proteção de arquivos, falha e decodificação real do MP4. Manual descreve criação de perfil exclusivo e os limites da integração TikTok.
+
 ## 0.6.0-beta — 22/10/2026
 
 - Texto por trechos dentro do próprio MP4, com cartões equilibrados para evitar uma última palavra isolada; alternativa de cena completa mantida.

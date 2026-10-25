@@ -83,8 +83,8 @@ def init():
             c.execute("UPDATE jobs SET results_recorded_at=updated_at WHERE status='published'"+recorded)
         c.execute("INSERT INTO render_state(job_id,interrupted) SELECT id,1 FROM jobs WHERE status='rendering' ON CONFLICT(job_id) DO UPDATE SET interrupted=1")
         c.execute("UPDATE jobs SET status='error', error='A geração foi interrompida. A rotina pode retomar trabalhos locais autorizados; vídeos manuais exigem sua retomada.', updated_at=? WHERE status='rendering'", (stamp(),))
-    import campaigns,quality
-    campaigns.init();quality.init()
+    import campaigns,quality,stories
+    campaigns.init();quality.init();stories.init()
 
 
 def clean(value, maximum=300, required=False):

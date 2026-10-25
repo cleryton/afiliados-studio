@@ -19,6 +19,7 @@ import diagnostics
 import support
 import campaigns
 import quality
+import stories
 from version import VERSION
 
 TOKEN = secrets.token_urlsafe(32)
@@ -128,21 +129,24 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200,{'app':'AfiliadosStudio','version':VERSION,'tester':core.TESTER,'data_id':background.installation_id()})
             if path == '/api/state':
                 import content_engine
-                return self.respond(200, {**core.state(), 'token': TOKEN, 'automation':autopilot.state(),'campaigns':campaigns.state(),'content':content_engine.state(),'catalog':catalog.state(),'youtube':youtube_client.state(),'setup':readiness(),'operation':diagnostics.state(),'mode':{'tester':core.TESTER,'version':VERSION,'publishing_allowed':not core.TESTER}})
+                return self.respond(200, {**core.state(), 'token': TOKEN, 'stories':stories.state(), 'automation':autopilot.state(),'campaigns':campaigns.state(),'content':content_engine.state(),'catalog':catalog.state(),'youtube':youtube_client.state(),'setup':readiness(),'operation':diagnostics.state(),'mode':{'tester':core.TESTER,'version':VERSION,'publishing_allowed':not core.TESTER}})
             if path=='/api/support/report':
                 return self.respond(200,support.report())
             if path == '/api/export':
                 state = core.state()
                 automation=autopilot.state()
                 return self.respond(200, {'version': 3, 'campaigns':campaigns.state(), 'exported_at': core.stamp(), 'products': state['products'], 'jobs': state['jobs'], 'expenses':automation['expenses'], 'auto_products':automation['products']})
-            if path.startswith('/media/'):
+            story_media=re.fullmatch(r'/stories/([a-f0-9]{32})/(video\.mp4|poster\.png|legenda\.txt|legendas\.srt|roteiro\.json)',path)
+            if story_media:
+                file=stories.media_file(*story_media.groups())
+            elif path.startswith('/media/'):
                 if not re.fullmatch(r'/media/(?:diagnostics/(?:video\.mp4|poster\.png)|[a-f0-9]{32}\.jpg|[a-f0-9]{32}/(?:video\.mp4|scene-[0-6]\.png|legenda\.txt|legendas\.srt|conteudo\.json))', path):
                     return self.respond(404, {'error': 'Arquivo não encontrado.'})
                 file = core.DATA / path.lstrip('/')
             else:
                 if path=='/manual-tester.md':
                     return self.send_file(core.ROOT/'docs'/'MANUAL_TESTER.md')
-                allowed = {'/': 'index.html', '/app.js': 'app.js', '/setup.js':'setup.js', '/automation.js':'automation.js', '/style.css': 'style.css', '/automation.css':'automation.css','/professional.js':'professional.js','/professional.css':'professional.css'}
+                allowed = {'/': 'index.html', '/app.js': 'app.js', '/stories.js':'stories.js', '/stories.css':'stories.css', '/setup.js':'setup.js', '/automation.js':'automation.js', '/style.css': 'style.css', '/automation.css':'automation.css','/professional.js':'professional.js','/professional.css':'professional.css'}
                 if path not in allowed:
                     return self.respond(404, {'error': 'Página não encontrada.'})
                 file = core.ROOT / 'web' / allowed[path]
@@ -217,6 +221,16 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('O modo tester bloqueia contas e envios externos. Use a demonstração local; a publicação real exige iniciar.bat.')
             if path=='/api/tester/demo':
                 return self.respond(201,support.create_demo())
+            if path=='/api/stories/pilot':
+                return self.respond(201,stories.create_pilot())
+            if path=='/api/stories/offer':
+                import story_offers
+                return self.respond(200,story_offers.attach(payload))
+            if path=='/api/stories/profile':
+                return self.respond(200,stories.set_profile(payload))
+            story_retry=re.fullmatch(r'/api/stories/([a-f0-9]{32})/retry',path)
+            if story_retry:
+                stories.retry(story_retry[1]);return self.respond(200,{'ok':True})
             if path=='/api/campaigns':
                 return self.respond(201,{'id':campaigns.save(payload)})
             campaign_match=re.fullmatch(r'/api/campaigns/([a-f0-9]{32})',path)
@@ -410,6 +424,7 @@ def serve(args):
         ('fotos',catalog_media.tick,60,120),
         ('cópias',maintenance.tick,60,60),
         ('teste privado',channel_probe.tick,5,300),
+        ('histórias locais',stories.tick,5,600),
     ],STOP)
     url = f'http://127.0.0.1:{args.port}'
     print(f'Afiliados Studio {VERSION} | '+('MODO TESTER · PUBLICAÇÃO BLOQUEADA | ' if core.TESTER else '')+f'{url} | Ctrl+C para encerrar', flush=True)

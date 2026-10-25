@@ -8,7 +8,13 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** versão 0.13.0-beta. A criação local e o primeiro envio privado em canal real foram validados: o YouTube confirmou processamento, privacidade e propriedade do canal. Publicação pública de ofertas comerciais e vendas continuam pendentes de validação com produtos autorizados. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** fontes na versão 0.14.0-beta. Geração local, envio privado e uma publicação pública com link de afiliado foram confirmados pela API do YouTube em canal real. Isso não comprova vendas ou comissões. Postagem pública automática no TikTok continua sem integração configurada. O teste privado dispensa afiliação; ofertas comerciais exigem links emitidos para uma afiliação aprovada. Lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+
+## Histórias no TikTok
+
+A versão 0.14 acrescenta **Histórias no TikTok** ao painel: prepare o piloto original **A chave do 12**, com três episódios, personagens realistas gerados por IA, narração local e legendas. Os arquivos são verticais, 720 × 1280. As imagens do piloto já acompanham as fontes; não há serviço automático de geração de novas imagens ou novas temporadas. São cenas estáticas com movimento de câmera, sem animação corporal ou sincronização labial.
+
+Essa fila somente cria arquivos locais e não envia ao YouTube, ao Buffer ou às suas contas pessoais. Crie um perfil exclusivo para o projeto e conclua a publicação no TikTok enquanto não houver integração compatível. A criação da conta depende dos dados, termos e verificações concluídos pelo titular. Consulte [o guia do TikTok](docs/TIKTOK.md) e [o manual do tester](docs/MANUAL_TESTER.md).
 
 ## Entrega para testers
 

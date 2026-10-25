@@ -317,3 +317,17 @@ A afiliação pode aparecer ativa antes de o cadastro estar completo. Se a aba L
 Depois da aprovação e do cadastro completo, use **Produtos → Minhas afiliações → Links** e cadastre seu link no estúdio com as características verificadas do produto. Convites de afiliação, links de outras pessoas e exemplos não são o seu link de divulgação. A identificação da plataforma Kiwify no cadastro não comprova aprovação ou atribuição de comissão.
 
 No modo tester, use somente os exemplos locais; não conclua afiliações nem envios reais para testar esse atalho. A geração e o envio ao YouTube continuam sujeitos às verificações já descritas no manual.
+
+## 22. Piloto de histórias para TikTok
+
+Abra **Histórias no TikTok**. Confira o aviso de TikTok não conectado, as imagens previamente geradas e o botão **Preparar os três episódios**. Clique uma vez; cliques repetidos devem manter uma única temporada com episódios 1, 2 e 3. Aguarde a fila local e assista às prévias. O terceiro episódio tem desfecho.
+
+Confira formato 720 × 1280, rótulos de ficção e IA, aparência consistente da protagonista, narração e os downloads MP4/SRT/legenda. O texto da legenda é fictício e não deve apresentar depoimentos ou comissões reais. A indicação no vídeo não substitui a configuração nativa de IA no TikTok. Ausência de voz portuguesa deve ser informada.
+
+Durante reprodução, a atualização não deve reiniciar o vídeo. Erros permitem tentar gerar somente o episódio afetado. Fechar e reabrir durante geração deve retomar a fila, preservando episódios prontos. Não faça publicações reais em contas pessoais para testar a tela: esta área apenas gera arquivos locais e permanece separada das automações de afiliados. Veja também [TIKTOK.md](TIKTOK.md).
+
+### Oferta nos episódios
+
+No tester, autorize um produto demonstrativo com link ilustrativo. Aplique-o à minissérie e confira a remontagem: ficção preservada, publicidade visível desde o início e bloco comercial final sem atores ou depoimentos. A legenda deve conter exatamente o link cadastrado e explicar a possível comissão. Reaplicar a mesma oferta não deve recriar a temporada. Produto alterado ou autorização retirada deve sinalizar oferta desatualizada e ocultar os downloads da versão antiga na tela.
+
+O campo de perfil aceita somente um @ válido. Salvar um @ não deve informar conta conectada nem publicar. Durante geração, editar o formulário não deve apagar o que está digitando. As marcações nativas de publicidade e IA são verificações do envio real, fora deste teste local.

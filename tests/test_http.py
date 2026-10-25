@@ -78,6 +78,25 @@ class HTTPTests(unittest.TestCase):
         self.assertFalse(autopilot.settings()['enabled'])
         self.assertFalse(youtube_client.settings()['enabled'])
 
+    def test_story_preparation_is_local_and_requires_csrf(self):
+        import stories
+        self.assertEqual(self.request('/api/stories/pilot',{})[0],403)
+        with patch.object(stories,'create_pilot',return_value={'id':'a'*32,'existing':False}) as create:
+            with patch.object(core,'TESTER',True):
+                self.assertEqual(self.request('/api/stories/pilot',{}, {'X-Studio-Token':app.TOKEN})[0],201)
+        create.assert_called_once()
+        self.assertEqual(self.request('/stories/'+'a'*32+'/speech-0.wav')[0],404)
+
+    def test_story_offer_and_profile_require_csrf(self):
+        import story_offers,stories
+        for path in ('/api/stories/offer','/api/stories/profile'):
+            self.assertEqual(self.request(path,{})[0],403)
+        with patch.object(story_offers,'attach',return_value={'ok':True}) as attach:
+            self.assertEqual(self.request('/api/stories/offer',{'approved':True},{'X-Studio-Token':app.TOKEN})[0],200)
+        attach.assert_called_once_with({'approved':True})
+        with patch.object(stories,'set_profile',return_value={'ok':True,'publishing_connected':False}):
+            self.assertEqual(self.request('/api/stories/profile',{'handle':'@projeto_teste'},{'X-Studio-Token':app.TOKEN})[0],200)
+
     def test_immediate_endpoint_requires_csrf_and_blocks_tester(self):
         import publication
         path='/api/youtube/publish-now/'+'a'*32
