@@ -231,6 +231,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/growth/record':
                 import story_growth
                 return self.respond(200,story_growth.record(payload))
+            if path=='/api/stories/cleanup':
+                import story_library
+                return self.respond(200,story_library.cleanup(execute=True))
             if path in ('/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'):
                 import story_publishing
                 if path.endswith('/connect'):result=story_publishing.connect(payload)

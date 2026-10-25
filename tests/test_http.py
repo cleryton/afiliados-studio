@@ -94,6 +94,13 @@ class HTTPTests(unittest.TestCase):
             self.assertEqual(self.request('/api/stories/growth/record',{'views':0},{'X-Studio-Token':app.TOKEN})[0],200)
         record.assert_called_once_with({'views':0})
 
+    def test_story_cleanup_requires_csrf_and_only_changes_local_library(self):
+        import story_library
+        self.assertEqual(self.request('/api/stories/cleanup',{})[0],403)
+        with patch.object(story_library,'cleanup',return_value={'executed':True,'removed_files':0}) as cleanup:
+            self.assertEqual(self.request('/api/stories/cleanup',{}, {'X-Studio-Token':app.TOKEN})[0],200)
+        cleanup.assert_called_once_with(execute=True)
+
     def test_story_offer_and_profile_require_csrf(self):
         import story_offers,stories
         for path in ('/api/stories/offer','/api/stories/profile'):

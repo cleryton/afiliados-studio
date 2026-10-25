@@ -1,5 +1,11 @@
 # Alterações
 
+## 0.19.0-beta — 25/10/2026
+
+- Biblioteca de capítulos 3D, com registros nativos de programação separados de publicação confirmada. Registros de agendamento também bloqueiam uma tentativa duplicada pela integração opcional.
+- Limpeza local de versões substituídas: conserva os capítulos atuais, qualquer recibo de postagem, itens da fila e projetos nativos. Confere hashes e caminhos antes de excluir; versões retiradas deixam de aparecer como downloads prontos e não voltam a ser geradas ao mudar a oferta.
+- Validador mantém falha para testes incompletos, com limite de doze minutos após um timeout observado no Windows com Python 3.11.
+
 ## 0.18.0-beta — 25/10/2026
 
 - Continuação 3D original nos capítulos 2 e 3, com conflito na abertura, legenda própria, pergunta sobre a história e bloco comercial final mais breve. Mantém link, publicidade e identificação de IA.

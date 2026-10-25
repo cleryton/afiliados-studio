@@ -116,6 +116,8 @@ class StoriesTests(unittest.TestCase):
         sid=stories.create_pilot()['id'];pid=self.product()
         story_offers.attach({'series_id':sid,'product_id':pid,'approved':True})
         with core.db() as c:c.execute("UPDATE story_episodes SET status='ready' WHERE series_id=?",(sid,))
+        with core.db() as c:identifier=c.execute('SELECT id FROM story_episodes WHERE number=1').fetchone()['id']
+        folder=core.DATA/'stories'/identifier;folder.mkdir(parents=True);(folder/'video.mp4').write_bytes(b'local fixture')
         self.assertIsNotNone(stories.state()['episodes'][0]['video_url'])
         with core.db() as c:c.execute('UPDATE products SET description=? WHERE id=?',('Características alteradas no cadastro original.',pid))
         episode=stories.state()['episodes'][0]
@@ -128,6 +130,12 @@ class StoriesTests(unittest.TestCase):
         s=stories.state();self.assertEqual(s['target_handle'],'projeto_teste');self.assertFalse(s['publishing_connected'])
         for handle in ('https://tiktok.com/@other','<script>','ab','bad/name'):
             with self.subTest(handle=handle),self.assertRaises(ValueError):stories.set_profile({'handle':handle})
+
+    def test_applying_offer_does_not_regenerate_retired_versions(self):
+        sid=stories.create_pilot()['id'];pid=self.product()
+        with core.db() as c:c.execute("UPDATE story_episodes SET status='archived' WHERE number=2")
+        story_offers.attach({'series_id':sid,'product_id':pid,'approved':True})
+        with core.db() as c:self.assertEqual(c.execute('SELECT status FROM story_episodes WHERE number=2').fetchone()['status'],'archived')
 
     def test_real_offer_video_uses_neutral_card_and_preserves_affiliate_disclosure(self):
         episode={'id':'d'*32,'number':1,'title':'Teste comercial','series_title':'A chave do 12',

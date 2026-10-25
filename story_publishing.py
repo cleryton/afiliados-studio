@@ -104,6 +104,9 @@ def queue(identifier,now=False):
     if core.TESTER:raise ValueError('O modo tester bloqueia a fila de publicação externa.')
     if not config['enabled'] or not config['binding']:raise ValueError('Ative a publicação e confirme o perfil primeiro.')
     snapshot=media_snapshot(identifier);current=core.now();account=config['binding']['account_id']
+    import story_library
+    if story_library.native_post_exists(snapshot['content_key'], config['binding']['handle']):
+        raise ValueError('Este capítulo já tem registro de postagem ou agendamento no TikTok Studio. Confira o destino; não haverá novo envio.')
     due=current if now else current.replace(hour=config['hour'],minute=0,second=0,microsecond=0)
     if not now and due<=current:due+=timedelta(days=1)
     with core.db() as c:

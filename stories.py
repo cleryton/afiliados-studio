@@ -58,14 +58,15 @@ def state():
         offer=story_offers.for_series(row['series_id']);row['offer']=offer
         row['offer_current']=story_offers.current(offer)
         row['scenes']+=story_offers.scenes(offer)
-        row['video_url']=f"/stories/{row['id']}/video.mp4?v={row['updated_at']}" if row['status']=='ready' and row['offer_current'] else None
+        row['video_url']=f"/stories/{row['id']}/video.mp4?v={row['updated_at']}" if row['status']=='ready' and row['offer_current'] and (core.DATA/'stories'/row['id']/'video.mp4').is_file() else None
     from story_renderer import asset_path
     assets_ready=all(asset_path(name).is_file() for name in ('discovery.png','corridor.png','sisters.png'))
     assets_ready=assets_ready and all((core.ROOT/'assets'/'story-pilot'/name).is_file() for name in ('key-prop.png','envelope-prop.png','photo-prop.png'))
     publishing=story_publishing.state()
     import story_growth
+    import story_library
     offer=next((row['offer'] for row in episodes if row['offer'] and row['offer_current']),None)
-    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'publishing':publishing,'growth':story_growth.state(offer),'publishing_connected':publishing['connected'],'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
+    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'animation_library':story_library.state(),'publishing':publishing,'growth':story_growth.state(offer),'publishing_connected':publishing['connected'],'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
             'destination':'TikTok','notice':'Criação local de ficção. Confira a conexão e os pedidos na seção de postagem. Nenhum episódio desta fila é enviado ao YouTube ou a contas pessoais.'}
 
 

@@ -46,7 +46,7 @@ def attach(payload):
         if prior and json.loads(prior['snapshot'])==offer:return {'ok':True,'existing':True}
         c.execute('INSERT INTO story_offers VALUES (?,?,?,?) ON CONFLICT(series_id) DO UPDATE SET product_id=excluded.product_id,snapshot=excluded.snapshot,updated_at=excluded.updated_at',
                   (sid,pid,json.dumps(offer,ensure_ascii=False),core.stamp()))
-        c.execute("UPDATE story_episodes SET status='queued',error='',voice=0,duration=NULL,updated_at=? WHERE series_id=?",(core.stamp(),sid))
+        c.execute("UPDATE story_episodes SET status='queued',error='',voice=0,duration=NULL,updated_at=? WHERE series_id=? AND status!='archived'",(core.stamp(),sid))
     return {'ok':True,'existing':False}
 
 

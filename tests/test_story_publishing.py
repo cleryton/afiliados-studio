@@ -46,6 +46,18 @@ class PublishingTests(unittest.TestCase):
         rows=sorted(publishing.state()['jobs'],key=lambda row:row['due_at'])
         self.assertEqual(rows[0]['due_at'][:10],'2026-10-25');self.assertEqual(rows[1]['due_at'][:10],'2026-10-26')
 
+    def test_native_schedule_prevents_a_duplicate_api_upload_of_same_chapter(self):
+        import animation3d
+        media=self.media();folder=core.DATA/'stories'/media
+        with core.db() as c:c.execute('DELETE FROM story_episodes WHERE id=?',(media,))
+        meta=json.loads((folder/'roteiro.json').read_text(encoding='utf-8'))
+        meta.update(episode=1,animation_type='original_procedural_3d',character_animation=True)
+        (folder/'roteiro.json').write_text(json.dumps(meta),encoding='utf-8')
+        receipt={'media_id':media,'handle':'novelitas0213','status':'scheduled_confirmed','scheduled_for':'2026-10-26T18:00:00-03:00','url':'https://www.tiktok.com/@novelitas0213/video/7700697193698577682'}
+        (folder/'agendamento-tiktok.json').write_text(json.dumps(receipt),encoding='utf-8')
+        with patch.object(animation3d,'preview_state',return_value={'id':media}),self.assertRaises(ValueError):publishing.queue(media)
+        self.assertEqual(publishing.state()['jobs'],[])
+
     def test_native_3d_chapters_have_distinct_logical_keys_but_versions_do_not(self):
         import animation3d
         media=self.media();folder=core.DATA/'stories'/media

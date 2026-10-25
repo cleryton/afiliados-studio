@@ -358,3 +358,7 @@ A suíte simula perda de resposta, troca da identificação estável da conta, l
 ## Conteúdo e resultados (0.18)
 
 Consulte [o roteiro de teste de engajamento](ENGAJAMENTO_TIKTOK.md): métricas locais com desconhecidos distintos de zero, validação do perfil e da data, persistência e prévia do capítulo 2 em 3D. Nenhuma sugestão editorial comprova aumento de alcance.
+
+## Biblioteca e limpeza (0.19)
+
+Confira [Biblioteca e operação](BIBLIOTECA_E_OPERACAO.md): múltiplos capítulos 3D, preservação dos arquivos atuais e dos registros de postagem, remoção idempotente e distinção entre horário agendado e publicação confirmada.
