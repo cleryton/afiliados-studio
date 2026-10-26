@@ -12,6 +12,7 @@ import sys
 from uuid import uuid4
 import wave
 import core
+from story_week_catalog import NUMBERS
 import story_renderer
 
 PILOT_3D = [
@@ -43,7 +44,7 @@ def preview_state():
         duration=float(meta['duration'])
         if not 0<duration<=180:return None
         number=meta.get('episode',1)
-        if type(number) is not int or number not in (1,2,3):return None
+        if type(number) is not int or number not in NUMBERS:return None
         return {'id':identifier,'title':f'A chave do 12 — capítulo {number} em animação 3D','number':number,'duration':duration,
             'video_url':f"/stories/{identifier}/video.mp4?v={preview.get('sha256','')}",
             'poster_url':f'/stories/{identifier}/poster.png','mouth_alignment':meta.get('mouth_alignment','procedural_not_phoneme_aligned')}

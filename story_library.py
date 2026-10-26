@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 from urllib.parse import urlsplit
 import core
+from story_week_catalog import NUMBERS
 
 ID = re.compile('[a-f0-9]{32}')
 RECEIPTS = ('publicacao-tiktok.json', 'agendamento-tiktok.json')
@@ -66,7 +67,7 @@ def entries():
         meta = read_json(folder/'roteiro.json')
         if not meta or not (folder/'video.mp4').is_file() or (folder/'video.mp4').is_symlink():continue
         if (folder/'video.mp4').resolve().parent != folder.resolve():continue
-        if type(meta.get('episode')) is not int or meta['episode'] not in (1,2,3):continue
+        if type(meta.get('episode')) is not int or meta['episode'] not in NUMBERS:continue
         if not re.fullmatch('[a-f0-9]{64}', str(meta.get('sha256',''))):continue
         rows.append({'id':folder.name, 'meta':meta, 'updated':(folder/'roteiro.json').stat().st_mtime_ns})
     return rows
@@ -113,6 +114,8 @@ def cleanup(execute=False):
     with core.db() as c:
         protected.update(r['media_id'] for r in c.execute('SELECT media_id FROM story_publications'))
         protected.update(r['id'] for r in c.execute("SELECT id FROM story_episodes WHERE status IN ('queued','rendering')"))
+        if c.execute("SELECT 1 FROM sqlite_master WHERE name='story_week_slots'").fetchone():
+            protected.update(r['media_id'] for r in c.execute("SELECT media_id FROM story_week_slots WHERE media_id!=''"))
     for row in rows:
         folder=core.DATA/'stories'/row['id']
         # Missing/unparseable receipt is still a hold, not permission to delete.
@@ -146,6 +149,8 @@ def cleanup(execute=False):
             # Refuse a concurrent request that just pinned a cleanup candidate.
             pinned={r['media_id'] for r in c.execute('SELECT media_id FROM story_publications')}
             active={r['id'] for r in c.execute("SELECT id FROM story_episodes WHERE status IN ('queued','rendering')")}
+            if c.execute("SELECT 1 FROM sqlite_master WHERE name='story_week_slots'").fetchone():
+                pinned.update(r['media_id'] for r in c.execute("SELECT media_id FROM story_week_slots WHERE media_id!=''"))
             if (pinned|active).intersection(obsolete):raise ValueError('A fila mudou. Confira a biblioteca antes de limpar novamente.')
             for identifier in obsolete:
                 if any((core.DATA/'stories'/identifier/name).exists() for name in RECEIPTS):

@@ -362,3 +362,7 @@ Consulte [o roteiro de teste de engajamento](ENGAJAMENTO_TIKTOK.md): métricas l
 ## Biblioteca e limpeza (0.19)
 
 Confira [Biblioteca e operação](BIBLIOTECA_E_OPERACAO.md): múltiplos capítulos 3D, preservação dos arquivos atuais e dos registros de postagem, remoção idempotente e distinção entre horário agendado e publicação confirmada.
+
+## Semana e pacotes (0.20)
+
+Veja [Semana de histórias](SEMANA_DE_HISTORIAS.md). Teste sete datas em São Paulo, reaproveitamento dos capítulos já prontos, processo único, parada em erro e recuperação sem duplicação. Pacotes desatualizados, alterados ou destinados a outro perfil devem ser recusados.

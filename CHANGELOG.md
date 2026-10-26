@@ -1,5 +1,12 @@
 # Alterações
 
+## 0.20.0-beta — 25/10/2026
+
+- Plano local de sete dias, com duas continuações prontas e cinco capítulos originais do arco O último desenho. Datas propostas não são marcações do TikTok.
+- Produção serial em processo separado, trava entre processos, reaproveitamento de arquivos prontos, recuperação de montagens concluídas e parada em caso de erro ou alteração do destino/produto. Não envia mídia.
+- Banco de movimento 3D original com um desenho geométrico novo; roteiros e narrações novos sobre gestos e câmeras já produzidos. Exportação registra o reaproveitamento e a ausência de sincronização labial com o novo áudio.
+- Pacotes com MP4, capa original, legenda, SRT e manifesto de destino/marcações. Conferência de hashes, autorização da oferta e registro de postagem antes de preparar/baixar; recibos e fila evitam novo envio do mesmo capítulo.
+
 ## 0.19.0-beta — 25/10/2026
 
 - Biblioteca de capítulos 3D, com registros nativos de programação separados de publicação confirmada. Registros de agendamento também bloqueiam uma tentativa duplicada pela integração opcional.

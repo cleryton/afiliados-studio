@@ -101,6 +101,23 @@ class HTTPTests(unittest.TestCase):
             self.assertEqual(self.request('/api/stories/cleanup',{}, {'X-Studio-Token':app.TOKEN})[0],200)
         cleanup.assert_called_once_with(execute=True)
 
+    def test_delivery_package_requires_csrf_and_download_rejects_stale_data(self):
+        import story_delivery
+        self.assertEqual(self.request('/api/stories/delivery/prepare',{})[0],403)
+        with patch.object(story_delivery,'prepare',return_value={'ok':True}) as prepare,patch.object(core,'TESTER',True):
+            self.assertEqual(self.request('/api/stories/delivery/prepare',{'media_id':'a'*32},{'X-Studio-Token':app.TOKEN})[0],200)
+        prepare.assert_called_once_with('a'*32)
+        with patch.object(story_delivery,'download',side_effect=ValueError('private details')):
+            status,_,body=self.request('/stories/'+'a'*32+'/pacote.zip')
+            self.assertEqual(status,409);self.assertNotIn('private details',body.decode())
+
+    def test_week_preparation_is_local_and_csrf_protected(self):
+        import story_week
+        self.assertEqual(self.request('/api/stories/week/prepare',{})[0],403)
+        with patch.object(story_week,'prepare',return_value={'id':'a'*32}) as prepare:
+            self.assertEqual(self.request('/api/stories/week/prepare',{'start_date':'2026-10-26'},{'X-Studio-Token':app.TOKEN})[0],200)
+        prepare.assert_called_once_with({'start_date':'2026-10-26'})
+
     def test_story_offer_and_profile_require_csrf(self):
         import story_offers,stories
         for path in ('/api/stories/offer','/api/stories/profile'):

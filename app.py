@@ -136,6 +136,11 @@ class Handler(BaseHTTPRequestHandler):
                 state = core.state()
                 automation=autopilot.state()
                 return self.respond(200, {'version': 3, 'campaigns':campaigns.state(), 'exported_at': core.stamp(), 'products': state['products'], 'jobs': state['jobs'], 'expenses':automation['expenses'], 'auto_products':automation['products']})
+            delivery=re.fullmatch(r'/stories/([a-f0-9]{32})/pacote\.zip',path)
+            if delivery:
+                import story_delivery
+                try:return self.send_file(story_delivery.download(delivery[1]))
+                except (ValueError,OSError):return self.respond(409,{'error':'Pacote indisponível ou desatualizado. Prepare-o novamente na biblioteca.'})
             story_media=re.fullmatch(r'/stories/([a-f0-9]{32})/(video\.mp4|poster\.png|legenda\.txt|legendas\.srt|roteiro\.json)',path)
             if story_media:
                 file=stories.media_file(*story_media.groups())
@@ -234,6 +239,12 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/cleanup':
                 import story_library
                 return self.respond(200,story_library.cleanup(execute=True))
+            if path=='/api/stories/delivery/prepare':
+                import story_delivery
+                return self.respond(200,story_delivery.prepare(payload.get('media_id')))
+            if path=='/api/stories/week/prepare':
+                import story_week
+                return self.respond(200,story_week.prepare(payload))
             if path in ('/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'):
                 import story_publishing
                 if path.endswith('/connect'):result=story_publishing.connect(payload)
@@ -431,7 +442,7 @@ def serve(args):
     except OSError:
         print(f'A porta {args.port} está ocupada. Use python app.py --port 8766')
         raise SystemExit(4)
-    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing
+    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing,story_week
     runtime_service.start([
         ('planejamento',autopilot.cycle,60,300),
         ('produção',worker,2,600),
@@ -442,6 +453,7 @@ def serve(args):
         ('teste privado',channel_probe.tick,5,300),
         ('histórias locais',stories.tick,5,600),
         ('TikTok das histórias',story_publishing.tick,15,180),
+        ('Preparação da semana 3D',story_week.tick,15,180),
     ],STOP)
     url = f'http://127.0.0.1:{args.port}'
     print(f'Afiliados Studio {VERSION} | '+('MODO TESTER · PUBLICAÇÃO BLOQUEADA | ' if core.TESTER else '')+f'{url} | Ctrl+C para encerrar', flush=True)

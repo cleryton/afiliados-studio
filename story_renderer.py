@@ -12,7 +12,7 @@ import story_motion
 from renderer import font, wrap
 
 ASSETS={'key':'discovery.png','letter':'sisters.png','building':'corridor.png',
-        'door':'corridor.png','portrait':'sisters.png','photo':'sisters.png','room':'sisters.png'}
+        'door':'corridor.png','portrait':'sisters.png','photo':'sisters.png','room':'sisters.png','drawing':'sisters.png'}
 
 
 def asset_path(name):

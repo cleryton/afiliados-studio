@@ -6,6 +6,7 @@ import re
 from uuid import uuid4
 from urllib.parse import urlsplit
 import core
+from story_week_catalog import NUMBERS
 import upload_post_client as provider
 
 DEFAULTS={'enabled':False,'binding':None,'hour':18,'monthly_limit':10,'auto_3d':False,'checked_at':None}
@@ -93,7 +94,7 @@ def media_snapshot(identifier,allow_archive=False):
     digest=hashlib.sha256((folder/'video.mp4').read_bytes()).hexdigest()
     if digest!=meta.get('sha256'):raise ValueError('O MP4 mudou após a validação. Gere novamente.')
     number=meta.get('episode',1)
-    if type(number) is not int or number not in (1,2,3):raise ValueError('Capítulo 3D inválido.')
+    if type(number) is not int or number not in NUMBERS:raise ValueError('Capítulo 3D inválido.')
     content=f"fiction:{row['series_id']}:{row['number']}" if row else f'3d:a-chave-do-12:{number}'
     return {'path':folder/'video.mp4','hash':digest,'caption':caption,'caption_hash':hashlib.sha256(caption.encode()).hexdigest(),
             'offer':offer,'content_key':content}

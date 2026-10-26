@@ -53,11 +53,11 @@ class Animation3DTests(unittest.TestCase):
 
     def test_preview_exposes_correct_chapter_and_rejects_invalid_numbers(self):
         pointer,folder,metadata=self.fixture()
-        for number in (2,3):
+        for number in (2,3,4,8):
             (folder/'roteiro.json').write_text(json.dumps({**metadata,'episode':number}),encoding='utf-8')
             self.assertEqual(animation3d.preview_state()['number'],number)
             self.assertIn(f'capítulo {number}',animation3d.preview_state()['title'])
-        for number in (0,4,True,'2'):
+        for number in (0,9,True,'2'):
             (folder/'roteiro.json').write_text(json.dumps({**metadata,'episode':number}),encoding='utf-8')
             self.assertIsNone(animation3d.preview_state())
 

@@ -235,7 +235,7 @@ def build(config):
     eva=actor('Eva',C['burgundy'],C['hairEva'],C['skinEva'],(.72,.40,0),curly=True)
     davi=actor('Davi',C['blue'],C['hair'],C['skinDavi'],(1.30,1.10,0),male=True)
     visible=[lia]
-    if kind in ('portrait','photo','room','door') or (episode>1 and kind=='letter'):visible.append(eva)
+    if kind in ('portrait','photo','room','door','drawing') or (episode>1 and kind=='letter'):visible.append(eva)
     if kind=='building':visible.append(davi)
     for character in (lia,eva,davi):
         if character not in visible:character['root'].location.x=50
@@ -252,6 +252,15 @@ def build(config):
     printmesh=mesh_obj('Image on paper',[(-.26,-.017,-.17),(.26,-.017,-.17),(.26,-.017,.17),(-.26,-.017,.17)],[(0,1,2,3)],mat,photo)
     uv=printmesh.data.uv_layers.new()
     for loop,coord in zip(uv.data,[(0,0),(1,0),(1,1),(0,1)]):loop.uv=coord
+    drawing=empty('Original drawing prop');box('Drawing paper',(0,0,0),(.60,.035,.44),C['paper'],drawing,.008)
+    # Original line drawing built from geometry, with no copied illustration.
+    for name,position,size in [('floor',(0,-.022,-.14),(.48,.006,.008)),
+            ('left wall',(-.23,-.022,.01),(.008,.006,.30)),('right wall',(.23,-.022,.01),(.008,.006,.30)),
+            ('ceiling',(0,-.022,.16),(.46,.006,.008)),('door left',(-.07,-.025,-.035),(.009,.006,.20)),
+            ('door right',(.07,-.025,-.035),(.009,.006,.20)),('door top',(0,-.025,.065),(.14,.006,.009))]:
+        box('Drawing stroke '+name,position,size,C['dark'],drawing,.001)
+    text_obj('12',(.105,-.028,.08),.055,C['burgundy'],drawing)
+    drawing.location.x=50
     package=box('Keepsake box',(50,0,0),(.70,.44,.32),C['woodlight'],bevel=.04)
     boxlid=box('Box lid',(50,0,0),(.73,.47,.055),C['wood'],bevel=.02)
     for prop in (key,letter,photo):prop.location.x=50
@@ -265,7 +274,7 @@ def build(config):
     samples=[];animated=[]
     for char in visible:
         animated += [char['root'],char['body'],char['head'],char['mouth'],*char['arms'],*char['forearms'],*char['eyes'],*char['brows']]
-    animated += [key,letter,photo,hinge,package,boxlid,camera]
+    animated += [key,letter,photo,drawing,hinge,package,boxlid,camera]
     fps=scene.render.fps;end=scene.frame_end
     envelope=config.get('speech_envelope',[])
     sample_frames=sorted(set([1,end,*range(1,end+1,1 if envelope else 4)]))
@@ -289,7 +298,7 @@ def build(config):
             for char in visible:
                 char['arms'][0].rotation_euler[0]=-.75;char['forearms'][0].rotation_euler[0]=-.8
                 char['arms'][1].rotation_euler[0]=-.85+.12*slow;char['forearms'][1].rotation_euler[0]=-.65
-        if kind in ('portrait','photo','room'):
+        if kind in ('portrait','photo','room','drawing'):
             eva['arms'][1].rotation_euler[0]=-1.0+.10*slow;eva['forearms'][1].rotation_euler[0]=-.7
             eva['head'].rotation_euler[2]=-.25+.10*math.sin(t*.8)
             lia['head'].rotation_euler[2]=.28+.10*math.sin(t*.8)
@@ -317,6 +326,8 @@ def build(config):
             letter.location=lia['hands'][1].matrix_world.translation+Vector((-.10,-.10,.10));letter.rotation_euler=(0,.12*slow,.08*slow)
         if kind in ('portrait','photo'):
             photo.location=eva['hands'][1].matrix_world.translation+Vector((-.10,-.10,.10));photo.rotation_euler=(0,.08*slow,-.10+.10*slow)
+        if kind=='drawing':
+            drawing.location=eva['hands'][1].matrix_world.translation+Vector((-.10,-.10,.10));drawing.rotation_euler=(0,.08*slow,-.10+.10*slow)
         if kind=='building' and episode>1:
             package.location=davi['hands'][0].matrix_world.translation+Vector((.15,-.10,.12));boxlid.location=package.location+Vector((0,0,.19))
         # Frame the actors above the subtitle safe area; cut between real 3D views.
@@ -327,6 +338,8 @@ def build(config):
             target=Vector(letter.location);camera.location=target+Vector((.65,-2.15,.38));camera_data.lens=50
         elif kind=='photo' and shot==1:
             target=Vector(photo.location);camera.location=target+Vector((.5,-2.2,.25));camera_data.lens=50
+        elif kind=='drawing' and shot==1:
+            target=Vector(drawing.location);camera.location=target+Vector((.5,-2.2,.25));camera_data.lens=50
         elif kind=='door':
             target=Vector((1.0,1.6,1.65));camera.location=(3.8,-3.7,2.6);camera_data.lens=42
         else:
