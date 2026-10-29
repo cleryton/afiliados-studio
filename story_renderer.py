@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw
 import core
 import creative
 import story_motion
+import story_director
 from renderer import font, wrap
 
 ASSETS={'key':'discovery.png','letter':'sisters.png','building':'corridor.png',
@@ -33,7 +34,7 @@ def asset_for(episode,index,scene):
 def overlay(episode,text,path,commercial=False):
     canvas=Image.new('RGBA',(720,1280),(0,0,0,0));draw=ImageDraw.Draw(canvas)
     draw.rounded_rectangle((30,72,610,164),radius=18,fill=(10,15,20,200))
-    draw.text((48,85),f"A CHAVE DO 12 · EP. {episode['number']}",font=font(25,True),fill='#f2d9a8')
+    draw.text((48,85),f"{episode.get('overlay_title','A CHAVE DO 12')} · {episode.get('display_number',episode['number'])}",font=font(25,True),fill='#f2d9a8')
     label='PUBLICIDADE · OFERTA DE AFILIADO' if commercial else 'FICÇÃO · IA · CONTÉM PUBLICIDADE' if episode.get('offer') else 'FICÇÃO · IMAGENS IA · VOZ SINTÉTICA'
     draw.text((48,124),label,font=font(16,True),fill='white')
     if commercial:
@@ -71,7 +72,7 @@ def render(episode):
     import story_offers
     offer=episode.get('offer')
     scenes=json.loads(episode['scenes'])+story_offers.scenes(offer,brief=episode.get('offer_style')=='brief');directory=core.DATA/'stories'/episode['id'];directory.mkdir(parents=True,exist_ok=True)
-    exe=imageio_ffmpeg.get_ffmpeg_exe();durations=[];voice=[];segments=[]
+    exe=imageio_ffmpeg.get_ffmpeg_exe();durations=[];voice=[];segments=[];timings=[]
     run_options={'check':True,'capture_output':True,'timeout':180,'creationflags':getattr(subprocess,'CREATE_NO_WINDOW',0)}
     try:
         # Check the entire source set before spending time on narration.
@@ -79,7 +80,8 @@ def render(episode):
         clips=[story_motion.authorized_clip(episode,i) if s['visual']!='offer' else None for i,s in enumerate(scenes)]
         for index,scene in enumerate(scenes):
             speech=directory/f'speech-{index}.json';audio=directory/f'speech-{index}.wav'
-            speech.write_text(json.dumps({'text':scene['text'],'rate':0},ensure_ascii=False),encoding='utf-8')
+            timing=directory/f'speech-{index}-timing.json'
+            speech.write_text(json.dumps({'text':scene['text'],'rate':0,'timing_path':str(timing.resolve())},ensure_ascii=False),encoding='utf-8')
             voiced=False
             try:
                 subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-File',str(core.ROOT/'speech.ps1'),str(speech),str(audio)],**{**run_options,'timeout':60})
@@ -87,9 +89,13 @@ def render(episode):
                 if duration<=0:raise ValueError('Áudio vazio.')
                 voiced=True
             except (OSError,subprocess.SubprocessError,wave.Error,ValueError):duration=len(scene['text'].split())/2.5
-            durations.append(math.ceil(max(4.5,duration+.35)*24)/24);voice.append(voiced)
+            minimum=2.5 if episode.get('director') else 4.5
+            durations.append(math.ceil(max(minimum,duration+.25)*24)/24);voice.append(voiced)
+            try:timings.append(json.loads(timing.read_text(encoding='utf-8-sig')) if voiced else [])
+            except (OSError,ValueError):timings.append([])
         if sum(durations)>180:raise ValueError('Episódio longo demais.')
-        cards=creative.subtitle_segments([s['text'] for s in scenes],durations)
+        cards,timing_methods=story_director.timed_cards([s['text'] for s in scenes],durations,timings)
+        review=story_director.review(episode['director'],durations,cards,voice) if episode.get('director') else None
         backgrounds=[story_motion.render_background(exe,episode,i,s,durations[i],assets[i],directory,clips[i]) for i,s in enumerate(scenes)]
         part=0
         for index,scene in enumerate(scenes):
@@ -126,10 +132,11 @@ def render(episode):
         (directory/'legendas.srt').write_text(creative.srt(cards),encoding='utf-8')
         (directory/'roteiro.json').write_text(json.dumps({'title':episode['series_title'],'episode':episode['number'],'scenes':scenes,
             'duration':duration,'voice':all(voice),'ai_images':True,'offer':offer,'offer_style':episode.get('offer_style','full'),'image_generation':'Prepared separately; no automatic image service connected.',
-            'subtitle_timing':'estimated_by_text','editing_style':story_motion.STYLE,
+            'subtitle_timing':'sapi_word_boundaries' if all(m=='sapi_word_boundaries' for m in timing_methods) else 'mixed' if 'sapi_word_boundaries' in timing_methods else 'estimated_by_text',
+            'subtitle_timing_scenes':timing_methods,'director':review,'editing_style':'cinematic-director-v1' if review else story_motion.STYLE,
             'character_animation':False,'sound_design':'original_local_synthesis',
             'shot_timeline':[{'scene':i,'source':'authorized_video' if clips[i] else 'local_composite',
-                'shots':[] if clips[i] else story_motion.shots(s,durations[i]),
+                'shots':story_motion.clip_shots(s,durations[i],episode) if clips[i] and episode.get('director') else [] if clips[i] else story_motion.shots(s,durations[i]),
                 'clip':{k:v for k,v in clips[i].items() if k!='path'} if clips[i] else None} for i,s in enumerate(scenes)],
             'sha256':hashlib.sha256((directory/'video.mp4').read_bytes()).hexdigest()},ensure_ascii=False,indent=2),encoding='utf-8')
         return {'voice':all(voice),'duration':duration,'warning':'' if all(voice) else 'Sem voz pt-BR disponível; episódio com texto. Instale uma voz portuguesa e gere novamente.'}

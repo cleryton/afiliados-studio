@@ -133,7 +133,8 @@ def state(offer=None):
         latest[row['url']] = row
     posts = list(latest.values())
     measured = [p for p in posts if p['views'] and p['average_watch'] is not None]
-    return {'posts': posts, 'observations': len(rows),
+    import story_director
+    return {'posts': posts, 'observations': len(rows), 'director_policy':story_director.policy(posts,core.now()),
             'diagnosis': ('Registre tempo médio e conclusão após 24 h e 72 h para comparar capítulos. '
                           'As diferenças ainda não comprovam que uma abertura ou horário causou mais alcance.' if measured else
                           'Ainda faltam visualizações e tempo assistido para avaliar retenção. Não há abertura vencedora nem melhor horário comprovados.'),

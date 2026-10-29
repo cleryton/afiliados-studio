@@ -19,6 +19,17 @@ STYLE = 'cinematic-local-v1'
 SIZE = (720, 1280)
 
 
+def clip_shots(scene,duration,episode):
+    frames=round(duration*FPS)
+    maximum=episode.get('director',{}).get('policy',{}).get('shot_seconds',3.25)
+    if type(maximum) not in (float,int) or not 2<=maximum<=4:raise ValueError('Duração de plano inválida.')
+    count=max(1,math.ceil(frames/(maximum*FPS)))
+    # Centered, small reframings preserve faces/props in this source bank.
+    zooms=(1.0,1.16,1.06) if scene['visual'] in ('key','drawing') else (1.0,1.10,1.0)
+    return [{'start_frame':round(i*frames/count),'end_frame':round((i+1)*frames/count),
+             'mode':'original_3d_reframe','zoom':zooms[i%len(zooms)]} for i in range(count)]
+
+
 def shots(scene, duration):
     frames = round(duration * FPS)
     count = 1 if scene['visual'] == 'offer' else max(2, math.ceil(frames / (4 * FPS)))
@@ -139,8 +150,19 @@ def render_background(exe, episode, index, scene, duration, source, directory, c
     if clip:
         # Loop short footage instead of freezing its final frame. Original sound
         # is omitted: the story retains local narration and original effects.
-        subprocess.run(command + ['-stream_loop', '-1', '-i', str(clip['path']), '-vf',
-            'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1,fps=24'] + encoding, **options)
+        if episode.get('director'):
+            timeline=clip_shots(scene,duration,episode)
+            # Cut between bounded crops of the actual 3D footage. Source motion
+            # continues across cuts and caption changes; no still-frame inserts.
+            zoom='1'
+            for shot in reversed(timeline):
+                zoom=f"if(between(on,{shot['start_frame']},{shot['end_frame']-1}),{shot['zoom']},{zoom})"
+            graph=("scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1,fps=24,"
+                   f"zoompan=z='{zoom}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=720x1280:fps=24,setsar=1")
+            subprocess.run(command+['-stream_loop','-1','-i',str(clip['path']),'-vf',graph]+encoding,**options)
+        else:
+            subprocess.run(command + ['-stream_loop', '-1', '-i', str(clip['path']), '-vf',
+                'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1,fps=24'] + encoding, **options)
     else:
         painter = SceneFrames(source, scene, episode, duration)
         command += ['-f', 'rawvideo', '-pixel_format', 'rgb24', '-video_size', '720x1280', '-framerate', '24', '-i', 'pipe:0'] + encoding

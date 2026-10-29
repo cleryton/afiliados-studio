@@ -45,6 +45,9 @@ def preview_state():
         if not 0<duration<=180:return None
         number=meta.get('episode',1)
         if type(number) is not int or number not in NUMBERS:return None
+        if number>=9:
+            import story_director
+            story_director.validate_metadata(meta)
         return {'id':identifier,'title':f'A chave do 12 — capítulo {number} em animação 3D','number':number,'duration':duration,
             'video_url':f"/stories/{identifier}/video.mp4?v={preview.get('sha256','')}",
             'poster_url':f'/stories/{identifier}/poster.png','mouth_alignment':meta.get('mouth_alignment','procedural_not_phoneme_aligned')}

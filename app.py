@@ -245,6 +245,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/week/prepare':
                 import story_week
                 return self.respond(200,story_week.prepare(payload))
+            if path=='/api/stories/week/resume':
+                import story_week
+                return self.respond(200,story_week.resume(payload))
             if path in ('/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'):
                 import story_publishing
                 if path.endswith('/connect'):result=story_publishing.connect(payload)

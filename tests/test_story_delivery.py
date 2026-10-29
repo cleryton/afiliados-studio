@@ -72,6 +72,18 @@ class StoryDeliveryTests(unittest.TestCase):
         (self.source/'publicacao-tiktok.json').write_text(json.dumps(receipt),encoding='utf-8')
         with self.assertRaises(ValueError):delivery.prepare(self.identifier)
 
+    def test_new_collection_cannot_be_packaged_without_a_matching_editorial_review(self):
+        import story_director
+        from story_week_catalog import STORIES
+        story,report=story_director.plan(STORIES[9])
+        self.meta.update(episode=9,scenes=story['scenes']);self.write_meta()
+        with self.assertRaises(ValueError):delivery.prepare(self.identifier)
+        cards=[{'start':i*5,'end':(i+1)*5,'text':'Legenda de teste.'} for i in range(6)]
+        self.meta['director']=story_director.review(report,[5]*6,cards,[True]*6);self.write_meta()
+        delivery.prepare(self.identifier)
+        self.meta['scenes'][1]['text']='Alterado após a revisão.';self.write_meta()
+        with self.assertRaises(ValueError):delivery.download(self.identifier)
+
     def test_offer_revocation_and_missing_affiliate_disclosure_are_rejected(self):
         self.meta['offer']={'product_hash':'f'*64,'url':'https://example.com/own-affiliate'};self.write_meta()
         with patch('story_offers.current',return_value=True):

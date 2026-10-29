@@ -67,10 +67,16 @@ def scene_bank():
     return bank
 
 
-def render(number,offer,slot_id):
+def render(number,offer,slot_id,directed=None):
     import story_offers
     if number not in STORIES or not story_offers.current(offer):raise ValueError('Roteiro ou oferta indisponível.')
+    if shutil.disk_usage(core.DATA).free<256*1024**2:raise ValueError('Libere pelo menos 256 MB para a próxima montagem.')
     original=core.DATA;identifier=uuid4().hex;story=STORIES[number]
+    if number>=9:
+        import story_director
+        if not directed or not directed.get('report'):raise ValueError('Falta o plano editorial deste episódio.')
+        story,report=story_director.plan(STORIES[number],directed['report']['policy'])
+        if story!=directed['story'] or report!=directed['report']:raise ValueError('O plano editorial mudou; confira a preparação.')
     bank=scene_bank();workspace=original/'story-week'/'renders'/identifier;clips=workspace/'story-clips';clips.mkdir(parents=True)
     manifest={};sources=[]
     for index,scene in enumerate(story['scenes'],1):
@@ -80,8 +86,10 @@ def render(number,offer,slot_id):
                                       'sha256':item['sha256'],'file':name}
         sources.append({k:v for k,v in item.items() if k!='path'})
     (clips/'manifest.json').write_text(json.dumps(manifest),encoding='utf-8')
-    episode={'id':identifier,'number':number,'title':story['title'],'series_title':'A chave do 12 · O último desenho',
+    episode={'id':identifier,'number':number,'title':story['title'],'series_title':story.get('arc','A chave do 12 · O último desenho'),
              'scenes':json.dumps(story['scenes'],ensure_ascii=False),'offer':offer,'offer_style':'brief'}
+    if directed:
+        episode.update(director=directed['report'],overlay_title='SEGREDOS DO 12',display_number=story['arc_number'])
     try:
         core.DATA=workspace;result=story_renderer.render(episode)
     finally:core.DATA=original
@@ -94,8 +102,21 @@ def render(number,offer,slot_id):
                  'mouth_alignment':'reused_procedural_gestures_not_speech_aligned','animation_sources':sources,
                  'ai_images':False,'image_generation':'No raster imagery is visible in the reused 3D scenes.'})
     (target/'roteiro.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
-    (target/'legenda.txt').write_text(caption(number,offer),encoding='utf-8')
+    (target/'legenda.txt').write_text(caption(number,offer,story),encoding='utf-8')
     if not story_offers.current(offer):raise ValueError('A oferta mudou. O arquivo não foi liberado.')
     pointer={'id':identifier,'ready':True,'sha256':meta['sha256']}
     note=original/'story-3d'/'preview.new';note.write_text(json.dumps(pointer),encoding='utf-8');note.replace(original/'story-3d'/'preview.json')
+    # Discard only our duplicate render outputs after the complete master exists.
+    # Verified Blender source footage and native projects remain in their banks.
+    if (workspace.resolve().parent==(original/'story-week'/'renders').resolve() and
+            not workspace.is_symlink() and source.resolve().is_relative_to(workspace.resolve())):
+        for name in ('video.mp4','poster.png','legenda.txt','legendas.srt'):
+            duplicate=source/name
+            if (not duplicate.is_symlink() and duplicate.resolve().parent==source.resolve() and
+                    hashlib.sha256(duplicate.read_bytes()).hexdigest()==hashlib.sha256((target/name).read_bytes()).hexdigest()):
+                duplicate.unlink()
+        for index,item in enumerate(sources,1):
+            duplicate=clips/f'episode-{number}-scene-{index}.mp4'
+            if (not duplicate.is_symlink() and duplicate.resolve().parent==clips.resolve() and
+                    hashlib.sha256(duplicate.read_bytes()).hexdigest()==item['sha256']):duplicate.unlink()
     return identifier

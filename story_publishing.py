@@ -95,6 +95,9 @@ def media_snapshot(identifier,allow_archive=False):
     if digest!=meta.get('sha256'):raise ValueError('O MP4 mudou após a validação. Gere novamente.')
     number=meta.get('episode',1)
     if type(number) is not int or number not in NUMBERS:raise ValueError('Capítulo 3D inválido.')
+    if number>=9:
+        import story_director
+        story_director.validate_metadata(meta)
     content=f"fiction:{row['series_id']}:{row['number']}" if row else f'3d:a-chave-do-12:{number}'
     return {'path':folder/'video.mp4','hash':digest,'caption':caption,'caption_hash':hashlib.sha256(caption.encode()).hexdigest(),
             'offer':offer,'content_key':content}

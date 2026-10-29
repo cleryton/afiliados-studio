@@ -81,14 +81,20 @@ def latest_3d(rows):
         if (meta.get('animation_type') != 'original_procedural_3d' or meta.get('character_animation') is not True or
                 meta.get('voice') is not True or not isinstance(meta.get('duration'),(int,float)) or
                 not 0 < meta['duration'] <= 180 or not story_offers.current(meta.get('offer'))):continue
+        if meta['episode']>=9:
+            import story_director
+            try:story_director.validate_metadata(meta)
+            except ValueError:continue
         latest.setdefault(meta['episode'],row)
     return latest
 
 
 def state():
-    return [{'id':row['id'], 'number':number, 'title':f'A chave do 12 · capítulo {number} em 3D',
+    from story_week_catalog import STORIES
+    return [{'id':row['id'], 'number':number, 'title':f"Pequenos segredos do 12 · {number-8}: {STORIES[number]['title']}" if number>=9 else f'A chave do 12 · capítulo {number} em 3D',
              'duration':row['meta']['duration'], 'receipt':receipt(row['id']),
              'mouth_alignment':row['meta'].get('mouth_alignment','procedural_not_phoneme_aligned'),
+             'director':row['meta'].get('director'), 'subtitle_timing':row['meta'].get('subtitle_timing','estimated_by_text'),
              'video_url':f"/stories/{row['id']}/video.mp4?v={row['meta']['sha256']}",
              'poster_url':f"/stories/{row['id']}/poster.png"}
             for number,row in sorted(latest_3d(entries()).items())]

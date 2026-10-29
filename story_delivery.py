@@ -42,6 +42,9 @@ def snapshot(identifier):
     row=next((r for r in rows.values() if r['id']==identifier),None)
     if not row:raise ValueError('Escolha uma versão 3D completa e atual, com a oferta ainda autorizada.')
     meta=row['meta'];number=meta['episode'];content_key=f'3d:a-chave-do-12:{number}'
+    if number>=9:
+        import story_director
+        story_director.validate_metadata(meta)
     if story_library.native_post_exists(content_key,handle):
         raise ValueError('Este capítulo já possui registro no TikTok. Não será preparado outro envio.')
     with core.db() as c:
@@ -73,6 +76,7 @@ def snapshot(identifier):
     proof={'id':identifier,'chapter':number,'handle':handle,'content_key':content_key,
            'duration':meta['duration'],'files':fingerprints,'offer_hash':offer.get('product_hash') if offer else None,
            'ai_label_required':True,'third_party_commercial_label_required':bool(offer)}
+    if number>=9:proof['editorial_sha256']=hashlib.sha256(json.dumps(meta['director'],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
     digest=hashlib.sha256(json.dumps(proof,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
     return {'proof':proof,'fingerprint':digest,'stats':stats}
 

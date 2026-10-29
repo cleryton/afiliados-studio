@@ -117,3 +117,30 @@ class StoryWeekTests(unittest.TestCase):
         self.prepare()
         plan=week.state();protected=story_library.cleanup()['protected_ids']
         self.assertIn(plan['slots'][0]['media_id'],protected)
+
+    def test_next_collection_is_new_ordered_pinned_and_does_not_reuse_first_week(self):
+        week.prepare({'start_date':'2026-11-02','collection':'standalone'})
+        state=week.state()
+        self.assertEqual([s['number'] for s in state['slots']],list(range(9,16)))
+        self.assertEqual(state['ready'],0);self.assertEqual(state['native_registered'],0)
+        self.assertEqual(state['slots'][-1]['due_at'],'2026-11-08T18:00:00-03:00')
+        self.assertTrue(all(s['creative_plan']['report']['status']=='script_checked' for s in state['slots']))
+        with self.assertRaises(ValueError):week.prepare({'start_date':'2026-11-02','collection':'first'})
+        self.assertEqual(week.state()['slots'][0]['number'],9)
+        with core.db() as c:c.execute('UPDATE story_weeks SET enabled=0')
+        with self.assertRaises(ValueError):week.prepare({'start_date':'2026-11-09','collection':'standalone'})
+
+    def test_resume_keeps_ready_slots_and_rechecks_resources_profile_and_native_receipts(self):
+        result=self.prepare()
+        with core.db() as c:
+            c.execute('UPDATE story_weeks SET enabled=0 WHERE id=?',(result['id'],))
+            c.execute("UPDATE story_week_slots SET status='error' WHERE number=4")
+        payload={'id':result['id']}
+        with patch.object(week.shutil,'disk_usage',return_value=type('Disk',(),{'free':0})()):
+            with self.assertRaises(ValueError):week.resume(payload)
+        with patch.object(story_library,'native_post_exists',return_value=True):
+            with self.assertRaises(ValueError):week.resume(payload)
+        with patch.object(week.shutil,'disk_usage',return_value=type('Disk',(),{'free':2**30})()):
+            week.resume(payload)
+        state=week.state();self.assertEqual(state['ready'],2);self.assertEqual(state['slots'][2]['status'],'queued')
+        self.assertTrue(state['preparing'])

@@ -1,5 +1,13 @@
 # Alterações
 
+## 0.21.0-beta — 28/10/2026
+
+- Sete histórias originais completas para a próxima coleção, com roteiro e decisão de montagem fixados por posição do calendário. Protege os agendamentos anteriores.
+- Cortes entre enquadramentos da animação em movimento, mantendo a linha de tempo; legendas guiadas por eventos de palavras da voz local, com estimativa identificada se faltarem eventos válidos.
+- Revisão automática de voz, abertura, duração e leitura; o pacote exige revisão correspondente ao roteiro. Não atribui nota de viralização.
+- Experimento limitado de ritmo somente com observações suficientes, maduras e recentes de vídeos diferentes. Métricas continuam sendo registradas pelo titular, sem sincronização automática.
+- Conferência de espaço livre, descarte de cópias temporárias verificadas e retomada manual de preparação interrompida, sem refazer capítulos prontos ou enviar mídia.
+
 ## 0.20.0-beta — 25/10/2026
 
 - Plano local de sete dias, com duas continuações prontas e cinco capítulos originais do arco O último desenho. Datas propostas não são marcações do TikTok.

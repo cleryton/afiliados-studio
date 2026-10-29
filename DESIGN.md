@@ -62,3 +62,6 @@ Engajamento 0.18: seção Conteúdo e resultados no início de Histórias. Exibi
 Biblioteca 0.19: mostrar primeiro os capítulos 3D concluídos. Cada cartão deve distinguir arquivo local, agendamento registrado e publicação registrada. Nunca promover estado porque o relógio passou do horário. Versões arquivadas não aparecem na grade antiga. A limpeza é apenas local e informa a proteção de recibos, fila e projetos nativos.
 
 Semana 0.20: calendário local aparece primeiro, com sete datas, destino e estados de criação. Arquivo pronto não é agendamento confirmado. Botão de pacote somente nos capítulos sem recibo. Revalidar ao baixar; falha informa preparo necessário. Formulários e vídeo em reprodução continuam protegidos do polling. Conferir celular e desktop, sete pacotes, erro de geração e destino alterado.
+
+
+Direção 0.21: painel explica revisão e limites, sem pontuação de viralização. Nova coleção tem histórias completas e propostas de datas separadas dos recibos anteriores. Exibir abertura e revisão de cada arquivo, estimativa ou tempos reais das legendas. Permitir retomar preparação pausada sem refazer prontos. Não expandir publicidade opcional paga como requisito do fluxo gratuito.

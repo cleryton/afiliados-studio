@@ -42,3 +42,8 @@ O manifesto não é um recibo do TikTok. Preparar ou baixar o ZIP não envia o v
 4. Troque o perfil ou a autorização do produto: produção e pacotes devem ser retidos.
 5. Altere um arquivo depois de empacotar: o download precisa ser recusado até novo preparo válido.
 6. Confira o conteúdo do ZIP, a reprodução local, as capas e as legendas. Nada desse teste deve criar postagem externa.
+
+
+## Coleção seguinte (0.21)
+
+`collection: "standalone"` prepara as sete histórias completas **Pequenos segredos do 12**, posições globais 9–15, com revisão e decisão editorial fixadas no plano. Não substitui nem reenvia os capítulos 2–8. O painel mostra registros nativos separadamente das novas propostas. Consulte [Direção automática](DIRECAO_AUTOMATICA.md).
