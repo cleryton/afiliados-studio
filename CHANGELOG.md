@@ -1,5 +1,13 @@
 # Alterações
 
+## 0.22.0-beta — 29/10/2026
+
+- Espera automática por espaço e retomada de falhas temporárias com estado persistente, ordem preservada e limite de três tentativas reais. Pausa manual não é desfeita pela rotina.
+- Recuperação de vídeo já concluído, inclusive após falha ao empacotar, sem outra renderização do mesmo item.
+- Cuidado periódico verifica os arquivos e repara apenas pacotes a partir de fontes íntegras. Alterações essenciais exigem revisão. Reparos de pacote têm limite próprio.
+- Limpeza apenas de cópias temporárias idênticas com arquivo principal preservado. Não remove projetos, publicações ou pastas inteiras.
+- Painel mostra o próximo item sem registro, prévia, cópia da legenda, pacote, esperas e controles de pausa/conferência. Não envia mídia ao TikTok.
+
 ## 0.21.0-beta — 28/10/2026
 
 - Sete histórias originais completas para a próxima coleção, com roteiro e decisão de montagem fixados por posição do calendário. Protege os agendamentos anteriores.

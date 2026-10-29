@@ -65,3 +65,6 @@ Semana 0.20: calendário local aparece primeiro, com sete datas, destino e estad
 
 
 Direção 0.21: painel explica revisão e limites, sem pontuação de viralização. Nova coleção tem histórias completas e propostas de datas separadas dos recibos anteriores. Exibir abertura e revisão de cada arquivo, estimativa ou tempos reais das legendas. Permitir retomar preparação pausada sem refazer prontos. Não expandir publicidade opcional paga como requisito do fluxo gratuito.
+
+
+Cuidado 0.22: primeira seção apresenta última conferência, estado automático e próximo item sem registro. Usar linguagem clara para espera por espaço, tentativa temporária, revisão e pausa. Copiar legenda exige ação no botão. Não exibir reparo local como postagem, e uma solicitação de conferência que encontra o produtor ocupado precisa mostrar espera. Manter pausas após reinício, vídeo em reprodução e formulários durante polling.

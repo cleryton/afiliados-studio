@@ -8,9 +8,11 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** fontes na versão 0.21.0-beta. Geração local de histórias e agendamento nativo de uma versão 3D no TikTok Studio foram conferidos em conta do projeto. Isso não comprova alcance, vendas ou comissões. O YouTube pessoal e a rotina antiga de afiliados permanecem desativados nesta operação. A postagem automática por integração TikTok continua pendente de acesso compatível. Ofertas comerciais exigem afiliação aprovada e link próprio; lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** fontes na versão 0.22.0-beta. Geração local de histórias e agendamento nativo de uma versão 3D no TikTok Studio foram conferidos em conta do projeto. Isso não comprova alcance, vendas ou comissões. O YouTube pessoal e a rotina antiga de afiliados permanecem desativados nesta operação. A postagem automática por integração TikTok continua pendente de acesso compatível. Ofertas comerciais exigem afiliação aprovada e link próprio; lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Direção automática de conteúdo
+
+A versão 0.22 acrescenta cuidado periódico dos arquivos, reparo de pacotes e retomada automática após falta de espaço ou interrupções temporárias, com limites e pausa persistente. O próximo vídeo sem registro aparece no topo, com prévia, legenda e pacote. A postagem gratuita de novos arquivos continua dependendo do TikTok Studio. Veja [Cuidado automático](docs/CUIDADO_AUTOMATICO.md).
 
 A versão 0.21 acrescenta **Pequenos segredos do 12**: sete histórias originais completas, com aberturas alternativas previamente escritas, planos curtos sobre animação em movimento e legendas usando os tempos da voz do Windows. Uma revisão local confere narração, abertura, duração, leitura e correspondência do roteiro antes de liberar o pacote. Resultados registrados podem orientar um experimento de ritmo; não há sincronização automática de métricas ou previsão de viralização. Veja [Direção automática](docs/DIRECAO_AUTOMATICA.md).
 

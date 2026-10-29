@@ -248,6 +248,13 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/week/resume':
                 import story_week
                 return self.respond(200,story_week.resume(payload))
+            if path=='/api/stories/week/pause':
+                import story_week
+                return self.respond(200,story_week.pause(payload))
+            if path=='/api/stories/care/check':
+                import story_care
+                result=story_care.tick(force=True)
+                return self.respond(200,{'ok':True,'result':result,'care':story_care.state()})
             if path in ('/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'):
                 import story_publishing
                 if path.endswith('/connect'):result=story_publishing.connect(payload)
@@ -445,7 +452,7 @@ def serve(args):
     except OSError:
         print(f'A porta {args.port} está ocupada. Use python app.py --port 8766')
         raise SystemExit(4)
-    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing,story_week
+    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing,story_week,story_care
     runtime_service.start([
         ('planejamento',autopilot.cycle,60,300),
         ('produção',worker,2,600),
@@ -457,6 +464,7 @@ def serve(args):
         ('histórias locais',stories.tick,5,600),
         ('TikTok das histórias',story_publishing.tick,15,180),
         ('Preparação da semana 3D',story_week.tick,15,180),
+        ('Cuidado automático das histórias',story_care.tick,60,180),
     ],STOP)
     url = f'http://127.0.0.1:{args.port}'
     print(f'Afiliados Studio {VERSION} | '+('MODO TESTER · PUBLICAÇÃO BLOQUEADA | ' if core.TESTER else '')+f'{url} | Ctrl+C para encerrar', flush=True)

@@ -1,6 +1,6 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.21.0-beta · atualizado em 28/10/2026.
+Versão 0.22.0-beta · atualizado em 29/10/2026.
 
 Este roteiro permite testar instalação, roteiro, vídeo, narração, legendas e recuperação de falhas. O primeiro teste não exige conta de afiliado, Google, Buffer nem assinatura de IA.
 
@@ -371,3 +371,8 @@ Veja [Semana de histórias](SEMANA_DE_HISTORIAS.md). Teste sete datas em São Pa
 ## Direção automática (0.21)
 
 Siga os [testes de direção automática](DIRECAO_AUTOMATICA.md#teste-isolado) em dados isolados. Confira abertura curta, desfecho completo, cortes, legenda acompanhando a voz e revisão registrada. Uma montagem interrompida pode ser retomada depois de corrigir a causa; não deve refazer arquivos prontos, alterar agendamentos anteriores nem publicar mídia. Não registre números inventados para tentar melhorar o desempenho.
+
+
+## Cuidado automático (0.22)
+
+Teste esperas por disco, retomada após interrupção, reparo de ZIP, bloqueio de arquivo alterado e pausa persistente conforme [Cuidado automático](CUIDADO_AUTOMATICO.md#teste-isolado). O próximo item deve respeitar a ordem e mostrar data proposta, sem confirmar uma postagem. O modo tester continua bloqueando produtores em segundo plano e envio externo.

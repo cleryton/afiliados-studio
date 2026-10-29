@@ -7,6 +7,7 @@ function storiesPage(){
  const series=s.series[0],offer=episodes.find(e=>e.offer)?.offer;
  const allowed=data.products.filter(p=>data.automation.products.some(a=>a.product_id===p.id&&a.active&&a.approved));
  return heading('Histórias no TikTok','Ficção original em episódios, preparada no seu notebook.')+`
+ ${storyCarePanel(s.care,s.week)}
  ${storyDirectorPanel(s)}
  ${storyWeekPanel(s.week)}
  ${storyLibraryPanel(s.animation_library)}
@@ -45,6 +46,28 @@ document.addEventListener('click',async event=>{
 });
 
 let publishingSetupFocused=false;
+function storyCarePanel(care,week){
+ if(!care||!week)return '';
+ const next=care.next_item;
+ const clock=value=>new Date(value).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
+ return `<section class="panel story-offer story-care" aria-labelledby="story-care-title"><p class="eyebrow">CRIAÇÃO E CUIDADO LOCAIS</p><h2 id="story-care-title">${week.paused?'Cuidado automático pausado':'Cuidado automático das histórias'}</h2><p role="status">${esc(care.message)}</p><p class="field-help">${care.checked_at?`Última conferência: ${esc(clock(care.checked_at))} · São Paulo`:'A rotina confere os arquivos ao iniciar e a cada quinze minutos.'} · Pacotes reparados: ${care.total_repairs} · Arquivos conferidos: ${care.checked_files}</p>${next?`<div class="story-next-item"><p class="eyebrow">PRÓXIMO ARQUIVO AGUARDANDO ENVIO</p><h3>${esc(next.title)}</h3><p>Proposta: ${esc(clock(next.due_at))} · São Paulo${next.overdue?' · Data proposta já passou; ajuste no TikTok antes de confirmar.':''}</p><div class="download-row">${next.video_url?`<a class="button subtle" href="${esc(next.video_url)}" target="_blank" rel="noopener noreferrer">Assistir ao vídeo ↗</a><button class="button subtle" data-care-caption="${esc(next.media_id)}">Copiar legenda deste vídeo</button>`:'<p class="field-help">Aguardando a montagem ou a revisão do primeiro item da sequência.</p>'}${next.package?.ready?`<a class="button subtle" href="${esc(next.package.url)}" download>Baixar pacote de postagem ↓</a>`:''}</div></div>`:'<p class="inline-note">Todos os capítulos desta coleção têm registro nativo. Confira a publicação efetiva no TikTok.</p>'}<div class="toolbar"><button class="button subtle" data-care-check ${week.paused?'disabled':''}>Conferir agora e reparar pacotes</button><button class="button subtle" data-care-control="${week.paused?'resume':'pause'}" data-week-id="${esc(week.id)}">${week.paused?'Retomar cuidado e criação':'Pausar cuidado e próximas montagens'}</button></div><details><summary>Como funciona sem acompanhamento</summary><p>Falta de espaço vira uma espera, com nova conferência em cinco minutos. Interrupções temporárias da montagem usam até três tentativas, com espera entre elas. Vídeos concluídos são reaproveitados. Pacotes ausentes ou corrompidos são refeitos a partir do vídeo validado.</p><p class="field-help">Alterações no vídeo, perfil, oferta ou legenda exigem revisão. Pausar não altera o que já está no TikTok e uma montagem em andamento pode terminar. O envio gratuito de novos arquivos continua dependendo do login e da seleção no TikTok Studio. Nenhuma contratação é feita por esta rotina.</p></details></section>`;
+}
+document.addEventListener('click',async event=>{
+ const control=event.target.closest('[data-care-control]');
+ const check=event.target.closest('[data-care-check]');
+ const caption=event.target.closest('[data-care-caption]');
+ const b=control||check||caption;if(!b)return;
+ await busy(b,async()=>{try{
+  if(caption){
+   const response=await fetch(`/stories/${encodeURIComponent(b.dataset.careCaption)}/legenda.txt`);
+   if(!response.ok)throw new Error('A legenda não está disponível. Confira os arquivos.');
+   await navigator.clipboard.writeText(await response.text());toast('Legenda copiada. Confira o vídeo e as marcações de publicidade e IA no TikTok.');return;
+  }
+  if(control)await api(`/api/stories/week/${b.dataset.careControl}`,{id:b.dataset.weekId});
+  else {const result=await api('/api/stories/care/check',{});if(result.result?.status==='busy'){await refresh();toast('A montagem está em andamento. A conferência será feita quando o produtor estiver livre.');return;}}
+  await refresh();toast(control?'Configuração do cuidado local salva.':'Conferência local concluída. Nenhuma publicação foi enviada.');
+ }catch(error){toast(error.message);}});
+});
 function storyDirectorPanel(s){
  const policy=s.growth?.director_policy;
  const reviewed=(s.animation_library||[]).filter(a=>a.director?.status==='render_checked').length;
@@ -53,8 +76,8 @@ function storyDirectorPanel(s){
 }
 function storyWeekPanel(week){
  if(!week)return '';
- const labels={queued:'Na fila de criação',rendering:'Gerando vídeo local',ready:'Arquivo pronto · envio pendente',error:'Preparação interrompida'};
- return `<section class="panel story-offer story-week" aria-labelledby="story-week-title"><p class="eyebrow">SETE DIAS · ${week.collection==='standalone'?'HISTÓRIAS COMPLETAS':'CALENDÁRIO'}</p><h2 id="story-week-title">${week.collection==='standalone'?'Pequenos segredos do 12':'Sua semana de histórias'}</h2><p>${esc(week.notice)}</p><p class="inline-note">${week.ready} de ${week.total} arquivos prontos · @${esc(week.handle)} · ${week.preparing?'Produção e revisão locais ativas':'Produção local encerrada ou pausada'}</p><ol class="story-week-list">${week.slots.map(s=>`<li><div><strong>${esc(new Date(s.due_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}</strong><h3>${esc(s.title)}</h3><span class="badge">${esc(s.receipt?.label||labels[s.status]||s.status)}</span>${s.review?.status==='render_checked'?`<p class="field-help">Revisão concluída · abertura de ${Number(s.review.hook_duration).toLocaleString('pt-BR')} s · voz e leitura conferidas</p>`:s.creative_plan?.report?`<p class="field-help">Abertura: “${esc(s.creative_plan.report.hook)}” · roteiro conferido</p>`:''}${s.error?`<p class="form-error">${esc(s.error)}</p>`:''}</div>${s.receipt?`<a class="button subtle" href="${esc(s.receipt.url)}" target="_blank" rel="noopener noreferrer">Conferir no TikTok ↗</a>`:s.package?.ready?`<a class="button subtle" href="${esc(s.package.url)}" download>Baixar pacote completo ↓</a>`:''}</li>`).join('')}</ol><p class="field-help">Horário de São Paulo. A geração usa animações 3D originais reaproveitadas e narrações novas. Esses novos arquivos só estarão agendados quando houver confirmação do TikTok.</p>${!week.preparing&&week.slots.some(s=>s.status==='error')?`<button class="button subtle" data-story-week-resume="${week.id}">Retomar a preparação após corrigir a causa</button>`:''}</section>`;
+ const labels={queued:'Na fila de criação',rendering:'Gerando vídeo local',ready:'Arquivo pronto · envio pendente',error:'Preparação interrompida',waiting_storage:'Aguardando espaço · retomada automática',retry_wait:'Aguardando próxima tentativa automática'};
+ return `<section class="panel story-offer story-week" aria-labelledby="story-week-title"><p class="eyebrow">SETE DIAS · ${week.collection==='standalone'?'HISTÓRIAS COMPLETAS':'CALENDÁRIO'}</p><h2 id="story-week-title">${week.collection==='standalone'?'Pequenos segredos do 12':'Sua semana de histórias'}</h2><p>${esc(week.notice)}</p><p class="inline-note">${week.ready} de ${week.total} arquivos prontos · @${esc(week.handle)} · ${week.preparing?'Produção e revisão locais ativas':'Produção local encerrada ou pausada'}</p><ol class="story-week-list">${week.slots.map(s=>`<li><div><strong>${esc(new Date(s.due_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}</strong><h3>${esc(s.title)}</h3><span class="badge">${esc(s.receipt?.label||labels[s.status]||s.status)}</span>${s.review?.status==='render_checked'?`<p class="field-help">Revisão concluída · abertura de ${Number(s.review.hook_duration).toLocaleString('pt-BR')} s · voz e leitura conferidas</p>`:s.creative_plan?.report?`<p class="field-help">Abertura: “${esc(s.creative_plan.report.hook)}” · roteiro conferido</p>`:''}${s.retry_at?`<p class="field-help">Próxima conferência: ${esc(new Date(s.retry_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}))}</p>`:''}${s.error?`<p class="form-error">${esc(s.error)}</p>`:''}</div>${s.receipt?`<a class="button subtle" href="${esc(s.receipt.url)}" target="_blank" rel="noopener noreferrer">Conferir no TikTok ↗</a>`:s.package?.ready?`<a class="button subtle" href="${esc(s.package.url)}" download>Baixar pacote completo ↓</a>`:''}</li>`).join('')}</ol><p class="field-help">Horário de São Paulo. A geração usa animações 3D originais reaproveitadas e narrações novas. Esses novos arquivos só estarão agendados quando houver confirmação do TikTok.</p>${!week.preparing&&week.slots.some(s=>s.status==='error')?`<button class="button subtle" data-story-week-resume="${week.id}">Retomar a preparação após corrigir a causa</button>`:''}</section>`;
 }
 document.addEventListener('click',async event=>{
  const b=event.target.closest('[data-story-package]');if(!b)return;

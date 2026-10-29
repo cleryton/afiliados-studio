@@ -1,6 +1,7 @@
 """Seven local preparation slots. Never claims a TikTok schedule or sends media."""
 import argparse
 from datetime import date,datetime,timedelta
+import errno
 import hashlib
 import json
 import os
@@ -15,18 +16,44 @@ import story_delivery
 from story_week_catalog import WEEK_NUMBERS,NEXT_NUMBERS,STORIES
 from instance_lock import InstanceLock
 
+MIN_FREE=256*1024**2
+MAX_ATTEMPTS=3
+
+
+def capacity():
+    return shutil.disk_usage(core.DATA).free>=MIN_FREE
+
+
+def postpone(connection,job,kind,detail,minutes):
+    connection.execute('UPDATE story_week_slots SET status=?,block_code=?,error=?,retry_at=?,updated_at=? WHERE id=?',
+                       (kind,kind,detail,(core.now()+timedelta(minutes=minutes)).isoformat(),core.stamp(),job['id']))
+
+
+def hold(connection,job,code,detail):
+    connection.execute("UPDATE story_week_slots SET status='error',block_code=?,error=?,retry_at=NULL,updated_at=? WHERE id=?",
+                       (code,detail,core.stamp(),job['id']))
+    connection.execute('UPDATE story_weeks SET enabled=0 WHERE id=?',(job['week_id'],))
+
 
 def init():
     with core.db() as c:
         c.executescript('''CREATE TABLE IF NOT EXISTS story_weeks(
             id TEXT PRIMARY KEY,handle TEXT NOT NULL,start_date TEXT NOT NULL,offer TEXT NOT NULL,
-            enabled INTEGER NOT NULL,created_at TEXT NOT NULL,UNIQUE(handle,start_date));
+            enabled INTEGER NOT NULL,created_at TEXT NOT NULL,paused INTEGER NOT NULL DEFAULT 0,UNIQUE(handle,start_date));
             CREATE TABLE IF NOT EXISTS story_week_slots(
             id TEXT PRIMARY KEY,week_id TEXT NOT NULL REFERENCES story_weeks(id),number INTEGER NOT NULL,
             due_at TEXT NOT NULL,status TEXT NOT NULL,media_id TEXT NOT NULL DEFAULT '',error TEXT NOT NULL DEFAULT '',
-            updated_at TEXT NOT NULL,UNIQUE(week_id,number),UNIQUE(week_id,due_at));''')
+            updated_at TEXT NOT NULL,creative_plan TEXT NOT NULL DEFAULT '{}',attempts INTEGER NOT NULL DEFAULT 0,
+            retry_at TEXT,block_code TEXT NOT NULL DEFAULT '',UNIQUE(week_id,number),UNIQUE(week_id,due_at));''')
         if 'creative_plan' not in {r['name'] for r in c.execute('PRAGMA table_info(story_week_slots)')}:
             c.execute("ALTER TABLE story_week_slots ADD COLUMN creative_plan TEXT NOT NULL DEFAULT '{}'")
+        columns={r['name'] for r in c.execute('PRAGMA table_info(story_week_slots)')}
+        for name,declaration in (('attempts','INTEGER NOT NULL DEFAULT 0'),('retry_at','TEXT'),('block_code',"TEXT NOT NULL DEFAULT ''")):
+            if name not in columns:c.execute(f'ALTER TABLE story_week_slots ADD COLUMN {name} {declaration}')
+        if 'paused' not in {r['name'] for r in c.execute('PRAGMA table_info(story_weeks)')}:
+            c.execute('ALTER TABLE story_weeks ADD COLUMN paused INTEGER NOT NULL DEFAULT 0')
+    import story_care
+    story_care.init()
 
 
 def prepare(payload):
@@ -70,7 +97,7 @@ def prepare(payload):
         if c.execute('SELECT 1 FROM story_weeks WHERE enabled=1').fetchone():raise ValueError('Aguarde a semana em produção antes de preparar outra.')
         if collection=='standalone' and c.execute('SELECT 1 FROM story_weeks w JOIN story_week_slots s ON s.week_id=w.id WHERE w.handle=? AND s.number=9',(handle,)).fetchone():
             raise ValueError('Esta coleção já foi preparada. Use o calendário existente; não haverá outra cópia na fila.')
-        c.execute('INSERT INTO story_weeks VALUES (?,?,?,?,?,?)',(identifier,handle,start.isoformat(),json.dumps(offer),1,core.stamp()))
+        c.execute('INSERT INTO story_weeks(id,handle,start_date,offer,enabled,created_at) VALUES (?,?,?,?,?,?)',(identifier,handle,start.isoformat(),json.dumps(offer),1,core.stamp()))
         for offset,number in enumerate(numbers):
             due=datetime.combine(start+timedelta(days=offset),datetime.min.time(),core.TZ).replace(hour=hour)
             media=ready.get(number);media_id=media['id'] if media else ''
@@ -103,7 +130,7 @@ def state():
         if row['status']=='ready' and (story_delivery.target()!=plan['handle'] or not story_offers.current(json.loads(plan['offer']))):
             row['status']='error';row['error']='O perfil ou a oferta mudou. Confira os dados antes de retomar.';row['package']=None
     native=sum(bool(r['receipt']) for r in slots)
-    return {'id':plan['id'],'handle':plan['handle'],'start_date':plan['start_date'],'preparing':bool(plan['enabled']),
+    return {'id':plan['id'],'handle':plan['handle'],'start_date':plan['start_date'],'preparing':bool(plan['enabled']),'paused':bool(plan['paused']),
             'slots':slots,'ready':sum(r['status']=='ready' for r in slots),'total':7,
             'native_registered':native,
             'collection':'standalone' if slots[0]['number'] in NEXT_NUMBERS else 'first',
@@ -114,7 +141,7 @@ def resume(payload):
     import story_offers
     identifier=payload.get('id','')
     if not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier):raise ValueError('Semana inválida.')
-    if shutil.disk_usage(core.DATA).free<256*1024**2:raise ValueError('Libere pelo menos 256 MB no disco para retomar.')
+    if not capacity():raise ValueError('Libere pelo menos 256 MB no disco para retomar.')
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
         row=c.execute('SELECT * FROM story_weeks WHERE id=?',(identifier,)).fetchone()
@@ -122,20 +149,44 @@ def resume(payload):
             raise ValueError('Confira o perfil e a oferta antes de retomar.')
         if row['enabled']:return {'ok':True,'existing':True}
         if c.execute('SELECT 1 FROM story_weeks WHERE enabled=1').fetchone():raise ValueError('Outra semana já está em produção.')
-        pending=c.execute("SELECT number FROM story_week_slots WHERE week_id=? AND status IN ('queued','error','rendering')",(identifier,)).fetchall()
-        if not pending:raise ValueError('Esta semana já terminou; não há montagem para repetir.')
+        pending=c.execute("SELECT number FROM story_week_slots WHERE week_id=? AND status IN ('queued','error','rendering','waiting_storage','retry_wait')",(identifier,)).fetchall()
+        if not pending:
+            if row['paused']:
+                c.execute('UPDATE story_weeks SET paused=0 WHERE id=?',(identifier,))
+                return {'ok':True,'existing':False}
+            raise ValueError('Esta semana já terminou; não há montagem para repetir.')
         if any(story_library.native_post_exists(f"3d:a-chave-do-12:{r['number']}",row['handle']) for r in pending):
             raise ValueError('Um capítulo pendente já tem registro no TikTok; confira o destino.')
-        c.execute("UPDATE story_week_slots SET status='queued',error='',updated_at=? WHERE week_id=? AND status='error'",(core.stamp(),identifier))
-        c.execute('UPDATE story_weeks SET enabled=1 WHERE id=?',(identifier,))
+        c.execute("UPDATE story_week_slots SET status='queued',error='',block_code='',retry_at=NULL,attempts=0,updated_at=? WHERE week_id=? AND status IN ('error','waiting_storage','retry_wait')",(core.stamp(),identifier))
+        c.execute('UPDATE story_weeks SET enabled=1,paused=0 WHERE id=?',(identifier,))
     return {'ok':True,'existing':False}
+
+
+def pause(payload):
+    identifier=payload.get('id','')
+    if not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier):raise ValueError('Semana inválida.')
+    with core.db() as c:
+        if not c.execute('UPDATE story_weeks SET enabled=0,paused=1 WHERE id=?',(identifier,)).rowcount:raise ValueError('Semana não encontrada.')
+    return {'ok':True}
+
+
+def wake_waiting():
+    """Passive resource waits do not consume rendering attempts or undo a pause."""
+    with core.db() as c:
+        rows=c.execute("SELECT s.* FROM story_week_slots s JOIN story_weeks w ON w.id=s.week_id WHERE w.enabled=1 AND w.paused=0 AND s.status IN ('waiting_storage','retry_wait') AND s.retry_at<=?",(core.stamp(),)).fetchall()
+        for r in rows:
+            if r['status']=='waiting_storage' and not capacity():
+                postpone(c,r,'waiting_storage','Aguardando espaço livre. A criação retoma sozinha quando houver pelo menos 256 MB.',5)
+            elif r['attempts']>=MAX_ATTEMPTS:hold(c,r,'attempts','O limite de três tentativas foi atingido. Confira a causa antes de retomar.')
+            else:c.execute("UPDATE story_week_slots SET status='queued',retry_at=NULL,error='',block_code='',updated_at=? WHERE id=?",(core.stamp(),r['id']))
 
 
 def tick():
     if core.TESTER:return
+    wake_waiting()
     with core.db() as c:
-        needed=c.execute("SELECT 1 FROM story_weeks w JOIN story_week_slots s ON s.week_id=w.id WHERE w.enabled=1 AND s.status IN ('queued','rendering')").fetchone()
-    if not needed:return
+        needed=c.execute("SELECT s.status FROM story_weeks w JOIN story_week_slots s ON s.week_id=w.id WHERE w.enabled=1 AND w.paused=0 AND s.status IN ('queued','rendering','waiting_storage','retry_wait') ORDER BY s.due_at LIMIT 1").fetchone()
+    if not needed or needed['status'] not in ('queued','rendering'):return
     directory=core.DATA/'story-week'/'worker'
     try:
         with InstanceLock(directory):pass
@@ -153,7 +204,7 @@ def run_worker():
     init()
     with InstanceLock(core.DATA/'story-week'/'worker'):
         with core.db() as c:
-            interrupted=[dict(r) for r in c.execute("SELECT s.*,w.handle,w.offer FROM story_week_slots s JOIN story_weeks w ON w.id=s.week_id WHERE s.status='rendering'")]
+            interrupted=[dict(r) for r in c.execute("SELECT s.*,w.handle,w.offer FROM story_week_slots s JOIN story_weeks w ON w.id=s.week_id WHERE s.status IN ('rendering','queued','waiting_storage','retry_wait') AND w.enabled=1 AND w.paused=0")]
         for row in interrupted:
             pinned=json.loads(row['creative_plan'])
             expected=pinned.get('story',STORIES.get(row['number'],{})).get('scenes',[])
@@ -169,18 +220,31 @@ def run_worker():
                         c.execute('UPDATE story_weeks SET enabled=0 WHERE id=?',(row['week_id'],))
                     continue
             elif found:found=None
-            with core.db() as c:
-                c.execute('UPDATE story_week_slots SET status=?,media_id=?,updated_at=? WHERE id=?',
-                          ('ready' if found else 'queued',found['id'] if found else '',core.stamp(),row['id']))
+            if not found and row['attempts']>=MAX_ATTEMPTS:
+                with core.db() as c:hold(c,row,'attempts','Três montagens foram interrompidas. Confira a causa antes de retomar.')
+                continue
+            if found or row['status']=='rendering':
+                with core.db() as c:
+                    c.execute('UPDATE story_week_slots SET status=?,media_id=?,updated_at=? WHERE id=?',
+                              ('ready' if found else 'queued',found['id'] if found else '',core.stamp(),row['id']))
         while True:
             with core.db() as c:
                 c.execute('BEGIN IMMEDIATE')
                 row=c.execute("""SELECT s.*,w.handle,w.offer FROM story_week_slots s JOIN story_weeks w ON w.id=s.week_id
-                    WHERE w.enabled=1 AND s.status='queued' ORDER BY s.due_at LIMIT 1""").fetchone()
+                    WHERE w.enabled=1 AND w.paused=0 AND s.status IN ('queued','waiting_storage','retry_wait') ORDER BY s.due_at LIMIT 1""").fetchone()
                 if not row:
-                    c.execute("UPDATE story_weeks SET enabled=0 WHERE NOT EXISTS(SELECT 1 FROM story_week_slots s WHERE s.week_id=story_weeks.id AND s.status IN ('queued','rendering'))")
+                    c.execute("UPDATE story_weeks SET enabled=0 WHERE NOT EXISTS(SELECT 1 FROM story_week_slots s WHERE s.week_id=story_weeks.id AND s.status IN ('queued','rendering','waiting_storage','retry_wait'))")
                     break
-                job=dict(row);c.execute("UPDATE story_week_slots SET status='rendering',updated_at=? WHERE id=?",(core.stamp(),job['id']))
+                job=dict(row)
+                if job['status']!='queued':break
+                if not capacity():
+                    postpone(c,job,'waiting_storage','Aguardando espaço livre. A criação retoma sozinha quando houver pelo menos 256 MB.',5)
+                    break
+                if job['attempts']>=MAX_ATTEMPTS:
+                    hold(c,job,'attempts','O limite de três tentativas foi atingido. Confira a causa antes de retomar.')
+                    break
+                job['attempts']+=1
+                c.execute("UPDATE story_week_slots SET status='rendering',attempts=?,block_code='',retry_at=NULL,updated_at=? WHERE id=?",(job['attempts'],core.stamp(),job['id']))
             try:
                 offer=json.loads(job['offer'])
                 if story_delivery.target()!=job['handle'] or not story_offers.current(offer):raise ValueError('Destino ou oferta alterados.')
@@ -191,16 +255,31 @@ def run_worker():
                     identifier=story_week_renderer.render(job['number'],offer,job['id'],json.loads(job['creative_plan']))
                 else:identifier=story_week_renderer.render(job['number'],offer,job['id'])
                 if story_delivery.target()!=job['handle']:raise ValueError('Perfil alterado durante a preparação.')
+                # Link the completed master before packaging, so a later local
+                # interruption can adopt this exact render instead of remaking it.
+                root=core.DATA/'stories'/identifier
+                meta=story_library.read_json(root/'roteiro.json')
+                if meta and meta.get('week_slot')!=job['id']:
+                    meta['week_slot']=job['id']
+                    (root/'roteiro.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
                 story_delivery.prepare(identifier)
-                with core.db() as c:c.execute("UPDATE story_week_slots SET status='ready',media_id=?,error='',updated_at=? WHERE id=?",(identifier,core.stamp(),job['id']))
+                with core.db() as c:c.execute("UPDATE story_week_slots SET status='ready',media_id=?,error='',block_code='',retry_at=NULL,updated_at=? WHERE id=?",(identifier,core.stamp(),job['id']))
                 print(json.dumps({'stage':'ready_local','chapter':job['number'],'media_id':identifier}),flush=True)
-            except Exception:
+            except Exception as error:
                 # Private process log only; the API retains a short safe error.
                 import traceback
                 traceback.print_exc()
                 with core.db() as c:
-                    c.execute("UPDATE story_week_slots SET status='error',error=?,updated_at=? WHERE id=?",('A preparação parou. Confira o produto, as cenas e o registro local antes de retomar.',core.stamp(),job['id']))
-                    c.execute('UPDATE story_weeks SET enabled=0 WHERE id=?',(job['week_id'],))
+                    storage=(isinstance(error,OSError) and error.errno==errno.ENOSPC) or (isinstance(error,(OSError,subprocess.CalledProcessError)) and not capacity())
+                    transient=isinstance(error,subprocess.TimeoutExpired)
+                    if isinstance(error,subprocess.CalledProcessError):
+                        message=str(error.stderr or '').lower()
+                        transient=any(s in message for s in ('resource temporarily unavailable','cannot allocate memory','out of memory'))
+                    if storage and job['attempts']<MAX_ATTEMPTS:
+                        postpone(c,job,'waiting_storage','A montagem ficou sem espaço. Aguardando pelo menos 256 MB livres para retomar.',5)
+                    elif transient and job['attempts']<MAX_ATTEMPTS:
+                        postpone(c,job,'retry_wait','Interrupção temporária. A próxima tentativa será feita automaticamente.',(1,5)[job['attempts']-1])
+                    else:hold(c,job,'attempts' if transient or storage else 'review','A preparação parou. Confira o produto, as cenas e o registro local antes de retomar.')
                 print(json.dumps({'stage':'stopped','chapter':job['number']}),flush=True)
                 break
 
