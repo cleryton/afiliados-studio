@@ -1,5 +1,12 @@
 # Alterações
 
+## 0.23.0-beta — 31/10/2026
+
+- Quadro da operação semanal com contagens distintas de arquivos, agendamentos registrados, publicações confirmadas e pendências, acompanhado de um guia de uso nas férias.
+- Fila opcional de postagem usa os capítulos fixados no calendário em ordem, mantém propostas futuras e espera por capítulos incompletos ou pedidos que precisam de revisão.
+- Nova conferência de perfil, conexão, pausa e registros nativos imediatamente antes de transmitir. Validações sem transmissão não consomem a cota local diária. Hash do MP4 é calculado por leitura em fluxo.
+- Integração externa continua opcional e desativada na operação gratuita. Nenhum envio novo é declarado sem confirmação real.
+
 ## 0.22.0-beta — 29/10/2026
 
 - Espera automática por espaço e retomada de falhas temporárias com estado persistente, ordem preservada e limite de três tentativas reais. Pausa manual não é desfeita pela rotina.

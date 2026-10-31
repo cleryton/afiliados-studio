@@ -68,3 +68,6 @@ Direção 0.21: painel explica revisão e limites, sem pontuação de viralizaç
 
 
 Cuidado 0.22: primeira seção apresenta última conferência, estado automático e próximo item sem registro. Usar linguagem clara para espera por espaço, tentativa temporária, revisão e pausa. Copiar legenda exige ação no botão. Não exibir reparo local como postagem, e uma solicitação de conferência que encontra o produtor ocupado precisa mostrar espera. Manter pausas após reinício, vídeo em reprodução e formulários durante polling.
+
+
+Operação semanal 0.23: quadro no topo das histórias resume somente a coleção atual, com contagens distintas de arquivos prontos, agendamentos registrados e publicações confirmadas. Perfil diferente não deve herdar confirmações. A próxima ação distingue revisão, pausa, montagem e envio pendente. O guia para férias usa rota local fixa, sem dados da conta. O quadro permanece legível em tela estreita e não altera formulários nem reprodução durante a atualização periódica.

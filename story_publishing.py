@@ -9,7 +9,7 @@ import core
 from story_week_catalog import NUMBERS
 import upload_post_client as provider
 
-DEFAULTS={'enabled':False,'binding':None,'hour':18,'monthly_limit':10,'auto_3d':False,'checked_at':None}
+DEFAULTS={'enabled':False,'binding':None,'hour':18,'monthly_limit':10,'auto_3d':False,'checked_at':None,'automation_note':''}
 
 
 def init():
@@ -81,8 +81,8 @@ def media_snapshot(identifier,allow_archive=False):
     if row and row['status']!='ready':raise ValueError('Aguarde a montagem do episódio.')
     if not row:
         from animation3d import preview_state
-        preview=preview_state()
         archived=allow_archive and meta.get('animation_type')=='original_procedural_3d' and meta.get('character_animation') is True
+        preview=None if archived else preview_state()
         if not archived and (not preview or preview['id']!=identifier):raise ValueError('Escolha uma prévia 3D completa e atual.')
     import story_offers
     offer=meta.get('offer')
@@ -91,7 +91,8 @@ def media_snapshot(identifier,allow_archive=False):
     caption=' '.join((folder/'legenda.txt').read_text(encoding='utf-8').split())
     if len(caption)>2200:raise ValueError('Reduza a legenda para até 2.200 caracteres antes de publicar.')
     if offer and (offer['url'] not in caption or 'PUBLICIDADE' not in caption.upper()):raise ValueError('A legenda precisa preservar o link e a publicidade.')
-    digest=hashlib.sha256((folder/'video.mp4').read_bytes()).hexdigest()
+    with (folder/'video.mp4').open('rb') as stream:
+        digest=hashlib.file_digest(stream,'sha256').hexdigest()
     if digest!=meta.get('sha256'):raise ValueError('O MP4 mudou após a validação. Gere novamente.')
     number=meta.get('episode',1)
     if type(number) is not int or number not in NUMBERS:raise ValueError('Capítulo 3D inválido.')
@@ -103,16 +104,22 @@ def media_snapshot(identifier,allow_archive=False):
             'offer':offer,'content_key':content}
 
 
-def queue(identifier,now=False):
+def queue(identifier,now=False,*,planned_for=None,allow_archive=False):
     config=settings()
     if core.TESTER:raise ValueError('O modo tester bloqueia a fila de publicação externa.')
     if not config['enabled'] or not config['binding']:raise ValueError('Ative a publicação e confirme o perfil primeiro.')
-    snapshot=media_snapshot(identifier);current=core.now();account=config['binding']['account_id']
+    snapshot=media_snapshot(identifier,allow_archive=allow_archive);current=core.now();account=config['binding']['account_id']
     import story_library
     if story_library.native_post_exists(snapshot['content_key'], config['binding']['handle']):
         raise ValueError('Este capítulo já tem registro de postagem ou agendamento no TikTok Studio. Confira o destino; não haverá novo envio.')
     due=current if now else current.replace(hour=config['hour'],minute=0,second=0,microsecond=0)
     if not now and due<=current:due+=timedelta(days=1)
+    if planned_for is not None:
+        proposed=datetime.fromisoformat(planned_for)
+        if proposed.tzinfo is None:raise ValueError('A proposta precisa informar o fuso horário.')
+        proposed=proposed.astimezone(core.TZ)
+        # A missed preparation date is not permission to publish immediately.
+        due=proposed if proposed>current else due
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
         prior=c.execute('SELECT id FROM story_publications WHERE account_id=? AND (content_key=? OR media_hash=?)',
@@ -127,6 +134,74 @@ def queue(identifier,now=False):
             (identifier_request,identifier,snapshot['content_key'],account,json.dumps(config['binding']),snapshot['hash'],snapshot['caption_hash'],json.dumps(snapshot['offer']),
              'queued',due.isoformat(),core.stamp(),core.stamp()))
     return {'id':identifier_request,'existing':False}
+
+
+def queue_prepared():
+    """Feed the outbox from the pinned weekly plan, never the newest preview first."""
+    config=settings();binding=config['binding']
+    if not config['enabled'] or not binding or not config['auto_3d']:return
+    with core.db() as c:
+        plan=c.execute('SELECT * FROM story_weeks ORDER BY created_at DESC LIMIT 1').fetchone()
+        slots=c.execute('SELECT * FROM story_week_slots WHERE week_id=? ORDER BY due_at,number',
+                        (plan['id'],)).fetchall() if plan else []
+        jobs={r['content_key']:dict(r) for r in c.execute('SELECT * FROM story_publications WHERE account_id=?',
+                                                       (binding['account_id'],))}
+    def note(message):
+        if config.get('automation_note')!=message:put({'automation_note':message})
+    if not plan:
+        from animation3d import preview_state
+        preview=preview_state()
+        if preview:
+            import story_library
+            snapshot=media_snapshot(preview['id'])
+            if not story_library.native_post_exists(snapshot['content_key'],binding['handle']):queue(preview['id'])
+        note('Sem semana preparada; somente a prévia atual pode entrar na fila.')
+        return
+    if plan['handle'].lower()!=binding['handle'].lower():
+        note('O perfil da semana difere da conexão. Confira o destino.');return
+    import story_delivery
+    if story_delivery.target().lower()!=binding['handle'].lower():
+        note('O perfil exclusivo mudou. Confira a conexão antes de continuar.');return
+    if plan['paused']:
+        note('Semana pausada. Nenhum novo capítulo entrará na fila.');return
+    import story_offers
+    if not story_offers.current(json.loads(plan['offer'])):
+        note('A oferta da semana precisa de revisão.');return
+    import story_library
+    for slot in slots:
+        content=f"3d:a-chave-do-12:{slot['number']}"
+        if story_library.native_post_exists(content,binding['handle']):continue
+        prior=jobs.get(content)
+        if prior:
+            if prior['status'] in ('queued','published'):continue
+            note('Confira o pedido anterior antes de avançar a sequência.');return
+        if slot['status']!='ready' or not slot['media_id']:
+            note(f"Aguardando o capítulo {slot['number']}; a sequência será preservada.");return
+        snapshot=media_snapshot(slot['media_id'],allow_archive=True)
+        if snapshot['content_key']!=content or snapshot['offer']!=json.loads(plan['offer']):
+            raise ValueError('O arquivo não corresponde ao capítulo ou à oferta da semana.')
+        queue(slot['media_id'],planned_for=slot['due_at'],allow_archive=True)
+        note('Semana sendo colocada na agenda local, em ordem. Isso ainda não é um agendamento no TikTok.')
+        return
+    note('Todos os capítulos têm registro nativo ou pedido na fila. Confira a confirmação no destino.')
+
+
+def check_week_sequence(row,binding):
+    """A manually queued later chapter must not jump an unfinished predecessor."""
+    with core.db() as c:
+        slot=c.execute('SELECT s.*,w.paused,w.handle FROM story_week_slots s JOIN story_weeks w ON w.id=s.week_id WHERE s.media_id=? ORDER BY w.created_at DESC LIMIT 1',
+                       (row['media_id'],)).fetchone()
+        if not slot:return
+        if slot['paused']:raise ValueError('A semana foi pausada antes do envio.')
+        if slot['handle'].lower()!=binding['handle'].lower():raise ValueError('O destino da semana mudou. Envio retido.')
+        prior=c.execute('SELECT number FROM story_week_slots WHERE week_id=? AND (due_at<? OR (due_at=? AND number<?)) ORDER BY due_at,number',
+                        (slot['week_id'],slot['due_at'],slot['due_at'],slot['number'])).fetchall()
+        published={r['content_key'] for r in c.execute("SELECT content_key FROM story_publications WHERE account_id=? AND status='published'",(binding['account_id'],))}
+    import story_library
+    for earlier in prior:
+        key=f"3d:a-chave-do-12:{earlier['number']}"
+        if key not in published and not story_library.native_post_exists(key,binding['handle']):
+            raise ValueError('Um capítulo anterior ainda não tem confirmação no destino. Confira a sequência antes de continuar.')
 
 
 def publication_result(value,binding):
@@ -171,25 +246,39 @@ def tick():
         return
     if not config['enabled'] or not config['binding']:return
     if config.get('auto_3d'):
-        from animation3d import preview_state
-        preview=preview_state()
-        if preview:queue(preview['id'])
+        try:queue_prepared()
+        except (ValueError,OSError):
+            put({'automation_note':'Não foi possível validar o próximo capítulo. Confira os arquivos e a oferta antes de avançar.'})
+            return
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
         row=c.execute("SELECT * FROM story_publications WHERE status='queued' AND due_at<=? ORDER BY due_at LIMIT 1",(core.stamp(),)).fetchone()
         if not row:return
+        paused=c.execute('SELECT w.paused FROM story_weeks w JOIN story_week_slots s ON s.week_id=w.id WHERE s.media_id=? ORDER BY w.created_at DESC LIMIT 1',
+                         (row['media_id'],)).fetchone()
+        if paused and paused['paused']:return
         used=c.execute("SELECT COUNT(*) FROM story_publications WHERE substr(attempted_at,1,7)=?",(core.stamp()[:7],)).fetchone()[0]
         today=c.execute("SELECT COUNT(*) FROM story_publications WHERE substr(attempted_at,1,10)=?",(core.stamp()[:10],)).fetchone()[0]
         if used>=config['monthly_limit'] or today:return
-        c.execute("UPDATE story_publications SET status='sending',attempted_at=?,updated_at=? WHERE id=?",(core.stamp(),core.stamp(),row['id']))
+        c.execute("UPDATE story_publications SET status='sending',updated_at=? WHERE id=?",(core.stamp(),row['id']))
     try:
         binding=json.loads(row['binding'])
         if binding['account_id']!=config['binding']['account_id']:raise ValueError('O destino da fila difere da conexão atual.')
         binding=check_destination(binding);snapshot=media_snapshot(row['media_id'],allow_archive=True)
         if snapshot['hash']!=row['media_hash'] or snapshot['caption_hash']!=row['caption_hash'] or snapshot['offer']!=json.loads(row['offer']):
             raise ValueError('O vídeo, a legenda ou a oferta mudou. O envio foi retido.')
-        # Check pause again immediately before the external mutation.
-        if not settings()['enabled']:raise ValueError('Envio pausado antes de transmitir o vídeo.')
+        # Recheck current authorization and native receipts at the mutation boundary.
+        current=settings()
+        if not current['enabled']:raise ValueError('Envio pausado antes de transmitir o vídeo.')
+        if current['binding']!=config['binding']:raise ValueError('A conexão mudou durante a conferência. Confira o destino.')
+        import story_delivery
+        import story_library
+        if story_delivery.target().lower()!=binding['handle'].lower():raise ValueError('O perfil exclusivo do projeto mudou. Envio retido.')
+        if story_library.native_post_exists(snapshot['content_key'],binding['handle']):
+            raise ValueError('Este capítulo já tem registro no TikTok Studio. Nenhum novo upload foi feito.')
+        check_week_sequence(row,binding)
+        with core.db() as c:
+            c.execute('UPDATE story_publications SET attempted_at=? WHERE id=?',(core.stamp(),row['id']))
         value=provider.upload(snapshot['path'],snapshot['caption'],binding,row['id'],bool(snapshot['offer']))
         status,url,error=publication_result(value,binding);update(row['id'],status,error,url)
     except provider.ProviderError as error:update(row['id'],'uncertain' if error.uncertain else 'blocked',str(error))
@@ -202,4 +291,5 @@ def state():
     with core.db() as c:rows=[dict(r) for r in c.execute('SELECT id,media_id,status,due_at,external_url,error,updated_at FROM story_publications ORDER BY created_at DESC LIMIT 30')]
     return {'enabled':config['enabled'],'connected':bool(config['binding'] and provider.key_path().is_file()),
         'handle':(config['binding'] or {}).get('handle',''),'hour':config['hour'],'auto_3d':config['auto_3d'],
-        'monthly_limit':config['monthly_limit'],'jobs':rows,'provider':'Upload-Post','tester_blocked':core.TESTER}
+        'monthly_limit':config['monthly_limit'],'jobs':rows,'provider':'Upload-Post','tester_blocked':core.TESTER,
+        'automation_note':config['automation_note']}

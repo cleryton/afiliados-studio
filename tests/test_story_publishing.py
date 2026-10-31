@@ -155,6 +155,115 @@ class PublishingTests(unittest.TestCase):
         for identifier in (media,'../secret','b'*32):
             with self.subTest(identifier=identifier),self.assertRaises(ValueError):publishing.queue(identifier)
 
+    def prepared_week(self):
+        ids=[]
+        for n in (2,3):
+            mid=self.media(n);ids.append(mid);folder=core.DATA/'stories'/mid
+            meta=json.loads((folder/'roteiro.json').read_text(encoding='utf-8'))
+            meta.update(episode=n,animation_type='original_procedural_3d',character_animation=True)
+            (folder/'roteiro.json').write_text(json.dumps(meta),encoding='utf-8')
+            with core.db() as c:c.execute('DELETE FROM story_episodes WHERE id=?',(mid,))
+        with core.db() as c:
+            c.execute('INSERT INTO story_weeks(id,handle,start_date,offer,enabled,created_at) VALUES (?,?,?,?,?,?)',
+                      ('fixture-week','novelitas0213','2026-10-26','null',0,core.stamp()))
+            for n,mid in zip((2,3),ids):
+                c.execute('INSERT INTO story_week_slots(id,week_id,number,due_at,status,media_id,updated_at) VALUES (?,?,?,?,?,?,?)',
+                          (f'slot-{n}','fixture-week',n,f'2026-10-{24+n}T18:00:00-03:00','ready',mid,core.stamp()))
+        publishing.put({'auto_3d':True})
+        return ids
+
+    def native_receipt(self,mid):
+        value={'media_id':mid,'handle':'novelitas0213','status':'scheduled_confirmed',
+               'scheduled_for':'2026-10-26T18:00:00-03:00',
+               'url':'https://www.tiktok.com/@novelitas0213/video/7700697193698577682'}
+        (core.DATA/'stories'/mid/'agendamento-tiktok.json').write_text(json.dumps(value),encoding='utf-8')
+
+    def test_automatic_week_keeps_order_and_planned_dates_instead_of_latest_preview(self):
+        import animation3d
+        ids=self.prepared_week()
+        with patch.object(animation3d,'preview_state') as latest,patch.object(provider,'upload') as send:
+            for _ in range(4):publishing.tick()
+        latest.assert_not_called();send.assert_not_called()
+        with core.db() as c:rows=c.execute('SELECT * FROM story_publications ORDER BY due_at').fetchall()
+        self.assertEqual([r['media_id'] for r in rows],ids)
+        self.assertEqual([r['due_at'] for r in rows],['2026-10-26T18:00:00-03:00','2026-10-27T18:00:00-03:00'])
+
+    def test_automatic_week_never_skips_an_unfinished_or_blocked_predecessor(self):
+        self.prepared_week()
+        with core.db() as c:c.execute("UPDATE story_week_slots SET status='retry_wait' WHERE number=2")
+        publishing.queue_prepared();self.assertEqual(publishing.state()['jobs'],[])
+        with core.db() as c:c.execute("UPDATE story_week_slots SET status='ready' WHERE number=2")
+        publishing.queue_prepared()
+        with core.db() as c:c.execute("UPDATE story_publications SET status='blocked'")
+        publishing.queue_prepared();self.assertEqual(len(publishing.state()['jobs']),1)
+
+    def test_automatic_week_respects_pause_and_destination_change(self):
+        self.prepared_week()
+        with core.db() as c:c.execute('UPDATE story_weeks SET paused=1')
+        publishing.queue_prepared();self.assertEqual(publishing.state()['jobs'],[])
+        with core.db() as c:c.execute('UPDATE story_weeks SET paused=0')
+        stories.set_profile({'handle':'another_project'})
+        publishing.queue_prepared();self.assertEqual(publishing.state()['jobs'],[])
+
+    def test_week_pause_preserves_queued_send_and_resume_does_not_duplicate_it(self):
+        self.prepared_week();publishing.queue_prepared()
+        with core.db() as c:
+            c.execute('UPDATE story_publications SET due_at=?',(core.stamp(),))
+            c.execute('UPDATE story_weeks SET paused=1')
+        with patch.object(provider,'upload') as upload:publishing.tick()
+        upload.assert_not_called();self.assertEqual(publishing.state()['jobs'][0]['status'],'queued')
+        with core.db() as c:
+            self.assertIsNone(c.execute('SELECT attempted_at FROM story_publications').fetchone()[0])
+            c.execute('UPDATE story_weeks SET paused=0')
+        with patch.object(provider,'profiles',return_value=PROFILES),patch.object(provider,'upload',return_value={'success':True}) as upload:publishing.tick()
+        upload.assert_called_once()
+        self.assertEqual(sum(j['status']=='processing' for j in publishing.state()['jobs']),1)
+
+    def test_offer_change_blocks_automatic_week_before_it_enters_outbox(self):
+        self.prepared_week()
+        with patch('story_offers.current',return_value=False),patch.object(provider,'upload') as upload:
+            publishing.queue_prepared()
+        upload.assert_not_called();self.assertEqual(publishing.state()['jobs'],[])
+
+    def test_native_receipt_skips_registered_chapter_and_prevents_late_duplicate(self):
+        ids=self.prepared_week();publishing.queue_prepared()
+        self.native_receipt(ids[0]);publishing.queue_prepared()
+        with core.db() as c:c.execute('UPDATE story_publications SET due_at=? WHERE media_id=?',(core.stamp(),ids[0]))
+        with patch.object(provider,'profiles',return_value=PROFILES),patch.object(provider,'upload') as upload:publishing.tick()
+        upload.assert_not_called()
+        with core.db() as c:row=c.execute('SELECT * FROM story_publications WHERE media_id=?',(ids[0],)).fetchone()
+        self.assertEqual(row['status'],'blocked');self.assertIsNone(row['attempted_at'])
+        self.assertEqual(len(publishing.state()['jobs']),2)
+
+    def test_manually_queued_later_week_chapter_cannot_jump_unconfirmed_predecessor(self):
+        ids=self.prepared_week();publishing.put({'auto_3d':False})
+        publishing.queue(ids[1],now=True,allow_archive=True)
+        with patch.object(provider,'profiles',return_value=PROFILES),patch.object(provider,'upload') as upload:publishing.tick()
+        upload.assert_not_called();self.assertEqual(publishing.state()['jobs'][0]['status'],'blocked')
+
+    def test_account_changed_during_preflight_never_transmits(self):
+        self.due()
+        def changed():
+            publishing.put({'binding':{**BINDING,'profile':'different'}})
+            return PROFILES
+        with patch.object(provider,'profiles',side_effect=changed),patch.object(provider,'upload') as upload:publishing.tick()
+        upload.assert_not_called();self.assertEqual(publishing.state()['jobs'][0]['status'],'blocked')
+
+    def test_preflight_failure_does_not_spend_daily_transmission_allowance(self):
+        mid,_=self.due();(core.DATA/'stories'/mid/'legenda.txt').write_text('Changed',encoding='utf-8')
+        with patch.object(provider,'profiles',return_value=PROFILES),patch.object(provider,'upload') as upload:publishing.tick()
+        upload.assert_not_called()
+        self.due(2)
+        # The queue still reserves separate days; make this fixture due today.
+        with core.db() as c:c.execute("UPDATE story_publications SET due_at=? WHERE status='queued'",(core.stamp(),))
+        with patch.object(provider,'profiles',return_value=PROFILES),patch.object(provider,'upload',return_value={'success':True}) as upload:publishing.tick()
+        upload.assert_called_once()
+
+    def test_past_week_proposal_reserves_future_slot_instead_of_immediate_catchup(self):
+        mid=self.media()
+        publishing.queue(mid,planned_for='2026-10-24T18:00:00-03:00')
+        self.assertEqual(publishing.state()['jobs'][0]['due_at'],'2026-10-25T18:00:00-03:00')
+
 
 class ProviderTests(unittest.TestCase):
     def test_destination_requires_stable_id_handle_and_unique_profile(self):

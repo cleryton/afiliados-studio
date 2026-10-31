@@ -151,6 +151,8 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 if path=='/manual-tester.md':
                     return self.send_file(core.ROOT/'docs'/'MANUAL_TESTER.md')
+                if path=='/guia-operacao.md':
+                    return self.send_file(core.ROOT/'docs'/'GUIA_FERIAS.md')
                 allowed = {'/': 'index.html', '/app.js': 'app.js', '/stories.js':'stories.js', '/stories.css':'stories.css', '/setup.js':'setup.js', '/automation.js':'automation.js', '/style.css': 'style.css', '/automation.css':'automation.css','/professional.js':'professional.js','/professional.css':'professional.css'}
                 if path not in allowed:
                     return self.respond(404, {'error': 'Página não encontrada.'})

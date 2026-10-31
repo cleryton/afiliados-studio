@@ -1,6 +1,6 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.22.0-beta · atualizado em 29/10/2026.
+Versão 0.23.0-beta · atualizado em 31/10/2026.
 
 Este roteiro permite testar instalação, roteiro, vídeo, narração, legendas e recuperação de falhas. O primeiro teste não exige conta de afiliado, Google, Buffer nem assinatura de IA.
 
@@ -376,3 +376,10 @@ Siga os [testes de direção automática](DIRECAO_AUTOMATICA.md#teste-isolado) e
 ## Cuidado automático (0.22)
 
 Teste esperas por disco, retomada após interrupção, reparo de ZIP, bloqueio de arquivo alterado e pausa persistente conforme [Cuidado automático](CUIDADO_AUTOMATICO.md#teste-isolado). O próximo item deve respeitar a ordem e mostrar data proposta, sem confirmar uma postagem. O modo tester continua bloqueando produtores em segundo plano e envio externo.
+
+
+## Operação da semana (0.23)
+
+Confira o quadro no topo de Histórias no TikTok. Arquivos prontos, agendamentos registrados e publicações confirmadas têm contagens separadas. Uma data passada não deve alterar nenhuma confirmação. O botão Abrir guia para as férias deve abrir o roteiro de uso sem expor dados privados.
+
+Na integração opcional de postagem, os testes automatizados devem demonstrar a entrada dos capítulos em ordem, preservação de datas propostas futuras e espera por um antecessor não pronto. Pausar a semana deve manter um pedido ainda não transmitido na fila, sem gastar tentativa; retomar permite voltar a conferi-lo. Um recibo nativo criado depois de entrar na fila deve impedir novo upload. Alterar o perfil durante a conferência também deve reter o envio. Testes simulados não comprovam postagem real.

@@ -34,3 +34,10 @@ O pedido recebe uma identificação persistente, usada como chave de idempotênc
 - **Envio retido / Conferir identificação**: conta, material, cota, plano ou marcações precisam de atenção. Não contratar planos nem repetir manualmente sem conferir o pedido anterior.
 
 O modo tester bloqueia conexão, ativação e envio externos. Os testes usam respostas simuladas e arquivos identificados como fixtures; isso não comprova uma publicação real.
+
+
+## Ordem da semana (0.23)
+
+Quando a opção automática está ativa, uma semana preparada tem prioridade sobre a prévia mais recente. A fila considera os capítulos do calendário em ordem, usa os arquivos fixados nessa semana e mantém as datas futuras propostas. Não pula um capítulo incompleto nem um pedido anterior que exige revisão. Sem semana preparada, a opção mantém o comportamento de usar apenas a prévia atual. A coleção continua finita.
+
+Uma proposta vencida recebe uma reserva futura no horário configurado; não representa publicação atrasada imediata. Um registro nativo impede o upload tanto na entrada da fila quanto na conferência final. Pausar uma semana retém seus pedidos ainda não transmitidos sem gastar tentativa. Pedidos já aceitos continuam sendo consultados. A conferência final também verifica a conexão atual e o perfil exclusivo. Validação recusada antes da transmissão não conta como tentativa diária local; as regras do provedor continuam independentes.
