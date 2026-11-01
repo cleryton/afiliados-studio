@@ -383,3 +383,10 @@ Teste esperas por disco, retomada após interrupção, reparo de ZIP, bloqueio d
 Confira o quadro no topo de Histórias no TikTok. Arquivos prontos, agendamentos registrados e publicações confirmadas têm contagens separadas. Uma data passada não deve alterar nenhuma confirmação. O botão Abrir guia para as férias deve abrir o roteiro de uso sem expor dados privados.
 
 Na integração opcional de postagem, os testes automatizados devem demonstrar a entrada dos capítulos em ordem, preservação de datas propostas futuras e espera por um antecessor não pronto. Pausar a semana deve manter um pedido ainda não transmitido na fila, sem gastar tentativa; retomar permite voltar a conferi-lo. Um recibo nativo criado depois de entrar na fila deve impedir novo upload. Alterar o perfil durante a conferência também deve reter o envio. Testes simulados não comprovam postagem real.
+
+
+## Autorização limitada da pasta de vídeos
+
+Execute primeiro `python scripts/configure_browser_access.py` para conferir sem alterar a configuração. O caminho informado deve terminar em `data/stories` dentro do projeto. Na configuração real autorizada, execute **reparar_acesso_videos.bat** ou passe `--apply`. Confira a cópia de recuperação junto do arquivo da integração, a preservação dos outros servidores e a ausência de qualquer opção de acesso irrestrito. Repetir não deve duplicar a pasta.
+
+Feche e abra o Codex antes do teste de envio. A configuração em disco e a integração em execução são estados diferentes. Um erro persistente não autoriza copiar o MP4 para outra pasta, desativar o verificador ou expor os arquivos por túnel. A comprovação exige que o comando normal de upload aceite o caminho original. O teste de link de pasta é dispensado quando o Windows não permite criar links; as verificações de caminho continuam no reparador.

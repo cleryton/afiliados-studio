@@ -261,3 +261,8 @@ node --check web/setup.js
 ```
 
 Testes de publicação usam respostas simuladas, sem uploads em contas reais. Artefatos de QA e o vídeo demonstrativo ficam em `artifacts/`, separados de `data/`. Não representam vendas nem produtos reais de afiliado.
+
+
+### Acesso do navegador aos vídeos
+
+Se a integração recusar o MP4 como fora das pastas autorizadas, use **reparar_acesso_videos.bat**. O reparador inclui somente `data/stories` na opção oficial de pastas permitidas do Chrome DevTools e preserva as demais configurações. Reabra o Codex para recarregar a integração. Nenhum vídeo é enviado por esse reparo. Veja [Envio sem selecionar cada arquivo](docs/ACESSO_AOS_VIDEOS.md).

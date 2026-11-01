@@ -1,5 +1,10 @@
 # Alterações
 
+## Após 0.23 — 31/10/2026
+
+- Reparador da autorização de arquivos do navegador: usa a opção oficial `--workspace` com somente `data/stories`, versão fixa, cópia de recuperação, conferência prévia e aplicação idempotente.
+- Orientações para recarregar a integração e validar o upload no caminho original. Nenhum túnel, cópia alternativa, alteração do verificador ou publicação automática é feito pelo reparador.
+
 ## 0.23.0-beta — 31/10/2026
 
 - Quadro da operação semanal com contagens distintas de arquivos, agendamentos registrados, publicações confirmadas e pendências, acompanhado de um guia de uso nas férias.
