@@ -13,7 +13,7 @@ from uuid import uuid4
 import core
 import story_library
 import story_delivery
-from story_week_catalog import WEEK_NUMBERS,NEXT_NUMBERS,STORIES
+from story_week_catalog import WEEK_NUMBERS,NEXT_NUMBERS,EXTRA_NUMBERS,STORIES
 from instance_lock import InstanceLock
 
 MIN_FREE=256*1024**2
@@ -112,6 +112,52 @@ def prepare(payload):
     return {'id':identifier,'existing':False}
 
 
+def expand(payload):
+    """Add two original stories daily; never move or replace existing schedules."""
+    import story_offers
+    import story_director
+    import story_growth
+    identifier=payload.get('id')
+    if not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier):raise ValueError('Semana inválida.')
+    handle=story_delivery.target()
+    feedback=story_director.policy(story_growth.state()['posts'],core.now())
+    plans={n:dict(zip(('story','report'),story_director.plan(STORIES[n],feedback))) for n in EXTRA_NUMBERS}
+    with core.db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        week=c.execute('SELECT * FROM story_weeks ORDER BY created_at DESC LIMIT 1').fetchone()
+        if not week or week['id']!=identifier or week['handle']!=handle:
+            raise ValueError('Escolha a semana atual e confira o perfil de destino.')
+        if not story_offers.current(json.loads(week['offer'])):raise ValueError('A oferta da semana precisa estar autorizada.')
+        slots=[dict(r) for r in c.execute('SELECT * FROM story_week_slots WHERE week_id=?',(identifier,))]
+        base=[s for s in slots if s['number'] in NEXT_NUMBERS]
+        if {s['number'] for s in base}!=set(NEXT_NUMBERS):raise ValueError('A ampliação exige a coleção de histórias completas.')
+        start=date.fromisoformat(week['start_date'])
+        proposed={n:datetime.combine(start+timedelta(days=i//2),datetime.min.time(),core.TZ).replace(hour=(12,21)[i%2]).isoformat()
+                  for i,n in enumerate(EXTRA_NUMBERS)}
+        existing=[s for s in slots if s['number'] in EXTRA_NUMBERS]
+        if existing:
+            if len(existing)!=14 or len(slots)!=21 or any(s['due_at']!=proposed[s['number']] for s in existing):
+                raise ValueError('A ampliação existente exige conferência; nenhuma cópia será criada.')
+            return {'id':identifier,'existing':True,'added':0,'total':21}
+        if len(slots)!=7 or week['paused'] or any(s['status']!='ready' for s in base):
+            raise ValueError('Conclua a preparação original e confira a pausa antes de ampliar.')
+        if c.execute('SELECT 1 FROM story_weeks WHERE enabled=1').fetchone():raise ValueError('Aguarde a produção em andamento.')
+        if not capacity():raise ValueError('Libere pelo menos 256 MB para produzir novos vídeos.')
+        if any(datetime.fromisoformat(due)<=core.now() for due in proposed.values()):
+            raise ValueError('Um horário adicional já passou. A ampliação não altera datas nem publica imediatamente.')
+        if set(proposed.values())&{s['due_at'] for s in slots}:raise ValueError('Um horário adicional coincide com a agenda existente.')
+        if any(story_library.native_post_exists(f'3d:a-chave-do-12:{n}',handle) for n in EXTRA_NUMBERS):
+            raise ValueError('Uma destas histórias já tem registro no TikTok. Confira o destino.')
+        if c.execute("SELECT 1 FROM story_publications WHERE content_key IN ("+','.join('?' for _ in EXTRA_NUMBERS)+") AND status!='cancelled'",
+                     tuple(f'3d:a-chave-do-12:{n}' for n in EXTRA_NUMBERS)).fetchone():
+            raise ValueError('Uma destas histórias já está em outra fila de postagem.')
+        for number,due in proposed.items():
+            c.execute('INSERT INTO story_week_slots(id,week_id,number,due_at,status,updated_at,creative_plan) VALUES(?,?,?,?,?,?,?)',
+                      (uuid4().hex,identifier,number,due,'queued',core.stamp(),json.dumps(plans[number],ensure_ascii=False)))
+        c.execute('UPDATE story_weeks SET enabled=1 WHERE id=?',(identifier,))
+    return {'id':identifier,'existing':False,'added':14,'total':21}
+
+
 def state():
     import story_offers
     with core.db() as c:
@@ -131,10 +177,10 @@ def state():
             row['status']='error';row['error']='O perfil ou a oferta mudou. Confira os dados antes de retomar.';row['package']=None
     native=sum(bool(r['receipt']) for r in slots)
     return {'id':plan['id'],'handle':plan['handle'],'start_date':plan['start_date'],'preparing':bool(plan['enabled']),'paused':bool(plan['paused']),
-            'slots':slots,'ready':sum(r['status']=='ready' for r in slots),'total':7,
+            'slots':slots,'ready':sum(r['status']=='ready' for r in slots),'total':len(slots),'per_day':len(slots)//7,
             'native_registered':native,
-            'collection':'standalone' if slots[0]['number'] in NEXT_NUMBERS else 'first',
-            'notice':f'{native} de 7 capítulos com registro nativo. Os demais horários são propostas locais; a data passar não comprova publicação.'}
+            'collection':'standalone' if any(s['number'] in NEXT_NUMBERS for s in slots) else 'first',
+            'notice':f'{native} de {len(slots)} capítulos com registro nativo. Os demais horários são propostas locais; a data passar não comprova publicação.'}
 
 
 def resume(payload):
@@ -251,7 +297,7 @@ def run_worker():
                 if job['number'] in (2,3):
                     import animation3d
                     identifier=animation3d.render_pilot(offer=offer,number=job['number'])['id']
-                elif job['number'] in NEXT_NUMBERS:
+                elif job['number']>=9:
                     identifier=story_week_renderer.render(job['number'],offer,job['id'],json.loads(job['creative_plan']))
                 else:identifier=story_week_renderer.render(job['number'],offer,job['id'])
                 if story_delivery.target()!=job['handle']:raise ValueError('Perfil alterado durante a preparação.')

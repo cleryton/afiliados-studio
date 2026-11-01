@@ -1,5 +1,11 @@
 # Alterações
 
+## 0.26.0-beta — 01/11/2026
+
+- Ampliação idempotente da semana para três histórias por dia: 14 roteiros inéditos às 12h e 21h, preservando os sete horários e recibos anteriores.
+- Catálogo adicional com conflitos e desfechos próprios; narração e montagem novas usando o banco de animação 3D original. Oferta comercial permanece separada da ficção.
+- Calendário e contagens passam a refletir 21 horários. Datas vencidas, colisões, pausas e alterações de oferta ou perfil bloqueiam a ampliação, sem publicar imediatamente nem refazer os vídeos anteriores.
+
 ## 0.25.0-beta — 01/11/2026
 
 - Painel mostra a última observação do acompanhamento, o impedimento registrado e a necessidade de nova conferência após 12 horas. O registro não é apresentado como conexão ao vivo.

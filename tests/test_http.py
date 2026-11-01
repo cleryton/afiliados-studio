@@ -106,6 +106,16 @@ class HTTPTests(unittest.TestCase):
             self.assertEqual(self.request('/api/stories/growth/record',{'views':0},{'X-Studio-Token':app.TOKEN})[0],200)
         record.assert_called_once_with({'views':0})
 
+    def test_week_expansion_is_local_but_still_requires_token_and_same_origin(self):
+        import story_week
+        url='/api/stories/week/expand'
+        with patch.object(story_week,'expand',return_value={'added':14,'total':21}) as expand:
+            self.assertEqual(self.request(url,{})[0],403)
+            self.assertEqual(self.request(url,{}, {'X-Studio-Token':app.TOKEN,'Origin':'https://example.com'})[0],403)
+            expand.assert_not_called()
+            self.assertEqual(self.request(url,{'id':'fixture'}, {'X-Studio-Token':app.TOKEN})[0],200)
+            expand.assert_called_once_with({'id':'fixture'})
+
     def test_story_cleanup_requires_csrf_and_only_changes_local_library(self):
         import story_library
         self.assertEqual(self.request('/api/stories/cleanup',{})[0],403)

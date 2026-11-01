@@ -91,7 +91,7 @@ def latest_3d(rows):
 
 def state():
     from story_week_catalog import STORIES
-    return [{'id':row['id'], 'number':number, 'title':f"Pequenos segredos do 12 · {number-8}: {STORIES[number]['title']}" if number>=9 else f'A chave do 12 · capítulo {number} em 3D',
+    return [{'id':row['id'], 'number':number, 'title':f"{STORIES[number].get('arc','Pequenos segredos do 12')} · {STORIES[number]['arc_number']}: {STORIES[number]['title']}" if number>=9 else f'A chave do 12 · capítulo {number} em 3D',
              'duration':row['meta']['duration'], 'receipt':receipt(row['id']),
              'mouth_alignment':row['meta'].get('mouth_alignment','procedural_not_phoneme_aligned'),
              'director':row['meta'].get('director'), 'subtitle_timing':row['meta'].get('subtitle_timing','estimated_by_text'),

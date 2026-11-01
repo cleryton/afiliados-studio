@@ -1,6 +1,8 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.25.0-beta · atualizado em 01/11/2026.
+Versão 0.26.0-beta · atualizado em 01/11/2026.
+
+Para a ampliação de sete para 21 horários, consulte [Três histórias por dia](TRES_VIDEOS_POR_DIA.md). A ação deve preservar os sete arquivos e recibos anteriores e acrescentar 14 roteiros sem criar cópias ao ser repetida. As propostas adicionais não contam como agendamentos confirmados.
 
 Este roteiro permite testar instalação, roteiro, vídeo, narração, legendas e recuperação de falhas. O primeiro teste não exige conta de afiliado, Google, Buffer nem assinatura de IA.
 

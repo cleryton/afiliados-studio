@@ -1,7 +1,8 @@
 """Finite original sequel; global episode numbers preserve posting order."""
-NUMBERS=tuple(range(1,16))
+NUMBERS=tuple(range(1,30))
 WEEK_NUMBERS=tuple(range(2,9))
 NEXT_NUMBERS=tuple(range(9,16))
+EXTRA_NUMBERS=tuple(range(16,30))
 STORIES={
 4:{'title':'O desenho com uma porta a mais','question':'Você procuraria a porta que não aparece no corredor?','scenes':[
  {'visual':'drawing','text':'O desenho mostrava o apartamento doze. Mas havia uma porta a mais.'},
@@ -103,12 +104,15 @@ for _number,_story in NEW_STORIES.items():
     STORIES[_number]={**_story,'arc':'Pequenos segredos do 12','arc_number':_number-8,'arc_total':7,
                      'standalone':True,'scenes':[{'visual':v,'text':t,'beat':b} for v,t,b in _story['scenes']]}
 
+from story_extra_catalog import EXTRA_STORIES
+STORIES.update(EXTRA_STORIES)
+
 
 def caption(number,offer,story=None):
     import story_offers
     story=story or STORIES[number]
     if story.get('standalone'):
-        return (story['scenes'][0]['text']+f"\nPequenos segredos do 12 · História {story['arc_number']} de 7: {story['title']}.\n"
+        return (story['scenes'][0]['text']+f"\n{story.get('arc','Pequenos segredos do 12')} · História {story['arc_number']} de {story.get('arc_total',7)}: {story['title']}.\n"
                 'Uma história completa de ficção original. Animação 3D e voz sintética.\n'+story['question']+
                 '\n#historias #animacao3d #dramafamiliar #conteudogeradoporia'+story_offers.caption(offer))
     return (story['scenes'][0]['text']+f"\nA chave do 12 · O último desenho · Capítulo {number-3} de 5: {story['title']}.\n"
