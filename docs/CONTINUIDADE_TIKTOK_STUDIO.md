@@ -34,6 +34,8 @@ Senha, código e CAPTCHA são concluídos pelo titular. O estúdio pode registra
 
 Se ainda não houve solicitação de agendamento, a rotina pode retomar uma prévia existente após conferir o mesmo arquivo, o perfil e a ausência de registro na lista recarregada. Essa retomada não concede outro upload. Se já houve solicitação, apenas a conferência do destino pode resolver a tentativa; não há reenvio automático cego.
 
+Na versão 0.26.1, uma falha explícita do seletor antes de aceitar o arquivo tem uma recuperação específica, limitada a uma vez por tentativa. O operador registra o motivo `selector` e confere o seletor vazio, a informação de que o arquivo não foi aceito e a ausência na lista recarregada do perfil. `retry-selection` só libera a seleção do mesmo arquivo, com fontes íntegras e data futura, sem pedido anterior de agendamento. Isso não se aplica a arquivo recusado por permissão, CAPTCHA, resultado perdido ou upload possivelmente aceito.
+
 ## Operação pelo assistente
 
 Os caminhos locais de integração são protegidos pelo mesmo token de sessão e pela mesma verificação de origem das outras ações do painel:
@@ -42,6 +44,7 @@ Os caminhos locais de integração são protegidos pelo mesmo token de sessão e
 - `POST /api/stories/native/advance`: registra `upload_started` antes do envio e depois `details_checked` e `submission_started`. O resultado `may_dispatch` só é verdadeiro na primeira transição para solicitação. Não clicar em Agendar novamente se esse resultado for falso ou se a resposta se perder.
 - `POST /api/stories/native/hold`: registra um motivo fixo para conferência, sem guardar mensagens de login, senhas ou códigos.
 - `POST /api/stories/native/resume-preview`: retoma somente uma prévia intacta, observada, sem solicitação anterior de agendamento. Não autoriza outro upload.
+- `POST /api/stories/native/retry-selection`: uma recuperação verificada da falha do seletor antes da transferência; não autoriza repetir um agendamento nem contornar permissões.
 - `POST /api/stories/native/confirm`: registra a observação do destino recarregado e salva um recibo de agendamento, mantendo publicação efetiva como não confirmada.
 
 Os caminhos acima não executam o navegador. Sem um operador ou uma integração compatível em execução, o aplicativo não publica sozinho. O catálogo de histórias continua finito. O modo tester bloqueia essas tentativas externas; os testes usam arquivos sintéticos e não representam posts reais.

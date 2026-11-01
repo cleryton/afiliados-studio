@@ -17,6 +17,7 @@ LABELS={'reserved':'Preparado para envio','upload_started':'Envio do arquivo ini
         'details_checked':'Configurações conferidas','submission_started':'Agendamento solicitado; conferir destino',
         'uncertain':'Resultado precisa de conferência','confirmed':'Agendamento registrado no TikTok'}
 REASONS={'login':'Entre no perfil exclusivo para continuar.','captcha':'Conclua pessoalmente a verificação do TikTok.',
+         'selector':'O seletor não aceitou o arquivo. Confira a tela e o destino antes de uma recuperação limitada.',
          'file_access':'A integração recusou o arquivo. Confira sua autorização.',
          'network':'A conexão foi interrompida. Confira o destino antes de repetir qualquer envio.',
          'unconfirmed':'O destino ainda não confirmou o agendamento. Não repita o envio.',
@@ -31,6 +32,8 @@ def init():
           stage TEXT NOT NULL,reason TEXT NOT NULL DEFAULT '',receipt TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,
           commercial INTEGER NOT NULL DEFAULT 0,submitted_at TEXT,
           UNIQUE(handle,content_key))''')
+        if 'selection_retries' not in {r['name'] for r in c.execute('PRAGMA table_info(story_native_attempts)')}:
+            c.execute('ALTER TABLE story_native_attempts ADD COLUMN selection_retries INTEGER NOT NULL DEFAULT 0')
 
 
 def _blocks_api(connection,content_key,handle):
@@ -137,6 +140,24 @@ def resume_preview(payload):
         changed=c.execute("UPDATE story_native_attempts SET stage='upload_started',reason='',updated_at=? WHERE id=? AND stage='uncertain' AND submitted_at IS NULL",
                           (core.stamp(),row['id'])).rowcount
     return {'ok':bool(changed),'may_upload':False,'may_dispatch':False,'stage':'upload_started' if changed else row['stage']}
+
+
+def retry_selection(payload):
+    """One retry after an explicit pre-transfer selector failure, never a lost upload."""
+    if core.TESTER:raise ValueError('O modo tester bloqueia tentativas de envio externo.')
+    row=_get(payload.get('id'))
+    if row['stage']!='uncertain' or row['reason']!='selector' or row['submitted_at'] or row['selection_retries']>=1:
+        raise ValueError('A tentativa exige conferência; não há outra autorização de envio.')
+    if (payload.get('selector_empty') is not True or payload.get('upload_not_accepted') is not True or
+            payload.get('destination_absent_after_reload') is not True or payload.get('observed_handle')!=row['handle'] or
+            payload.get('media_id')!=row['media_id']):
+        raise ValueError('Confirme a falha explícita anterior à transferência, o seletor vazio, o mesmo arquivo e a lista recarregada do perfil.')
+    _unchanged(row)
+    if datetime.fromisoformat(row['due_at'])<=core.now():raise ValueError('O horário proposto passou. Revise a agenda antes de tentar outro envio.')
+    with core.db() as c:
+        changed=c.execute("UPDATE story_native_attempts SET stage='reserved',reason='',selection_retries=selection_retries+1,updated_at=? WHERE id=? AND stage='uncertain' AND reason='selector' AND submitted_at IS NULL AND selection_retries=0 AND receipt IS NULL",
+                          (core.stamp(),row['id'])).rowcount
+    return {'ok':bool(changed),'may_upload':bool(changed),'may_dispatch':False,'stage':'reserved' if changed else row['stage']}
 
 
 def _write_receipt(row):

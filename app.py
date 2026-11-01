@@ -226,12 +226,13 @@ class Handler(BaseHTTPRequestHandler):
             external={'/api/setup/start','/api/youtube/credentials','/api/youtube/connect','/api/youtube/verify','/api/youtube/settings','/api/youtube/test/start','/api/automation/connect','/api/automation/install','/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'}
             if core.TESTER and path in external:
                 raise ValueError('O modo tester bloqueia contas e envios externos. Use a demonstração local; a publicação real exige iniciar.bat.')
-            if path in ('/api/stories/native/begin','/api/stories/native/advance','/api/stories/native/confirm','/api/stories/native/hold','/api/stories/native/resume-preview'):
+            if path in ('/api/stories/native/begin','/api/stories/native/advance','/api/stories/native/confirm','/api/stories/native/hold','/api/stories/native/resume-preview','/api/stories/native/retry-selection'):
                 import story_native
                 if path.endswith('/begin'):result=story_native.begin(payload)
                 elif path.endswith('/advance'):result=story_native.advance(payload)
                 elif path.endswith('/confirm'):result=story_native.confirm(payload)
                 elif path.endswith('/resume-preview'):result=story_native.resume_preview(payload)
+                elif path.endswith('/retry-selection'):result=story_native.retry_selection(payload)
                 else:result=story_native.hold(payload)
                 return self.respond(200,result)
             if path=='/api/tester/demo':

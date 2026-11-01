@@ -200,5 +200,39 @@ class NativeAttemptTests(unittest.TestCase):
             results=list(pool.map(lambda _:native.advance(self.evidence(identifier,'submission_started')),range(2)))
         self.assertEqual(sum(r['may_dispatch'] for r in results),1)
 
+    def test_explicit_selector_failure_has_one_verified_retry_and_keeps_same_attempt(self):
+        identifier=self.begin()['id'];native.advance(self.evidence(identifier,'upload_started'))
+        native.hold({'id':identifier,'reason':'selector'})
+        evidence={'id':identifier,'media_id':'2'*32,'observed_handle':'fiction_project','selector_empty':True,
+                  'upload_not_accepted':True,'destination_absent_after_reload':True}
+        for key in ('selector_empty','upload_not_accepted','destination_absent_after_reload'):
+            with self.subTest(key=key),self.assertRaises(ValueError):native.retry_selection({**evidence,key:False})
+        with patch.object(core,'now',return_value=datetime(2026,10,27,12,tzinfo=core.TZ)),self.assertRaises(ValueError):
+            native.retry_selection(evidence)
+        self.assertTrue(native.retry_selection(evidence)['may_upload'])
+        self.assertFalse(self.begin()['may_upload']);self.assertEqual(self.begin()['id'],identifier)
+        native.advance(self.evidence(identifier,'upload_started'));native.hold({'id':identifier,'reason':'selector'})
+        with self.assertRaises(ValueError):native.retry_selection(evidence)
+
+    def test_lost_upload_or_any_prior_submission_never_receives_selector_retry(self):
+        identifier=self.begin()['id'];native.advance(self.evidence(identifier,'upload_started'))
+        native.hold({'id':identifier,'reason':'network'})
+        evidence={'id':identifier,'media_id':'2'*32,'observed_handle':'fiction_project','selector_empty':True,
+                  'upload_not_accepted':True,'destination_absent_after_reload':True}
+        with self.assertRaises(ValueError):native.retry_selection(evidence)
+        native.resume_preview({'id':identifier,'media_id':'2'*32,'observed_handle':'fiction_project',
+                               'preview_matches':True,'destination_absent_after_reload':True})
+        for stage in ('details_checked','submission_started'):native.advance(self.evidence(identifier,stage))
+        native.hold({'id':identifier,'reason':'selector'})
+        with self.assertRaises(ValueError):native.retry_selection(evidence)
+
+    def test_selector_recovery_is_blocked_when_source_changes_or_tester_is_active(self):
+        identifier=self.begin()['id'];native.advance(self.evidence(identifier,'upload_started'));native.hold({'id':identifier,'reason':'selector'})
+        evidence={'id':identifier,'media_id':'2'*32,'observed_handle':'fiction_project','selector_empty':True,
+                  'upload_not_accepted':True,'destination_absent_after_reload':True}
+        with patch.object(core,'TESTER',True),self.assertRaises(ValueError):native.retry_selection(evidence)
+        (core.DATA/'stories'/('2'*32)/'legenda.txt').write_text('Changed',encoding='utf-8')
+        with self.assertRaises(ValueError):native.retry_selection(evidence)
+
 
 if __name__=='__main__':unittest.main()

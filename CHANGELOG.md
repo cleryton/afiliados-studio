@@ -1,5 +1,10 @@
 # Alterações
 
+## 0.26.1-beta — 01/11/2026
+
+- Uma única recuperação de falha explícita do seletor anterior à transferência, após conferir seletor vazio, arquivo não aceito e ausência no destino recarregado.
+- A recuperação preserva a mesma tentativa e nunca libera outra solicitação de agendamento. Respostas incertas, alterações de fonte, horários vencidos e tentativas já solicitadas permanecem retidas.
+
 ## 0.26.0-beta — 01/11/2026
 
 - Ampliação idempotente da semana para três histórias por dia: 14 roteiros inéditos às 12h e 21h, preservando os sete horários e recibos anteriores.

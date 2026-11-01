@@ -89,7 +89,7 @@ class HTTPTests(unittest.TestCase):
 
     def test_native_checkpoints_require_csrf_and_route_only_authorized_local_requests(self):
         import story_native
-        for path,name in (('begin','begin'),('advance','advance'),('hold','hold'),('resume-preview','resume_preview'),('confirm','confirm')):
+        for path,name in (('begin','begin'),('advance','advance'),('hold','hold'),('resume-preview','resume_preview'),('retry-selection','retry_selection'),('confirm','confirm')):
             url='/api/stories/native/'+path
             with self.subTest(path=path),patch.object(story_native,name,return_value={'ok':True}) as action:
                 self.assertEqual(self.request(url,{})[0],403)
