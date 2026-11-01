@@ -33,11 +33,16 @@ def init():
           UNIQUE(handle,content_key))''')
 
 
-def blocks_api(content_key,handle):
+def _blocks_api(connection,content_key,handle):
+    if not connection.execute("SELECT 1 FROM sqlite_master WHERE name='story_native_attempts'").fetchone():return False
+    return bool(connection.execute("SELECT 1 FROM story_native_attempts WHERE content_key=? AND lower(handle)=lower(?)",
+                                   (content_key,handle)).fetchone())
+
+
+def blocks_api(content_key,handle,*,connection=None):
+    if connection is not None:return _blocks_api(connection,content_key,handle)
     with core.db() as c:
-        if not c.execute("SELECT 1 FROM sqlite_master WHERE name='story_native_attempts'").fetchone():return False
-        return bool(c.execute("SELECT 1 FROM story_native_attempts WHERE content_key=? AND lower(handle)=lower(?)",
-                              (content_key,handle)).fetchone())
+        return _blocks_api(c,content_key,handle)
 
 
 def _get(identifier):
@@ -65,6 +70,8 @@ def begin(payload):
         c.execute('BEGIN IMMEDIATE')
         prior=c.execute('SELECT * FROM story_native_attempts WHERE handle=? AND content_key=?',(handle,proof['proof']['content_key'])).fetchone()
         if prior:return {'id':prior['id'],'existing':True,'may_upload':False,'stage':prior['stage']}
+        if c.execute("SELECT 1 FROM story_publications WHERE content_key=? AND status!='cancelled'",(proof['proof']['content_key'],)).fetchone():
+            raise ValueError('Este capítulo entrou em outra fila durante a preparação. Confira o pedido existente.')
         identifier=uuid4().hex
         c.execute('INSERT INTO story_native_attempts(id,media_id,content_key,handle,due_at,fingerprint,source_sha256,caption_hash,stage,created_at,updated_at,commercial) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
                   (identifier,media,proof['proof']['content_key'],handle,first['due_at'],proof['fingerprint'],proof['proof']['files']['video.mp4'],
@@ -109,7 +116,10 @@ def hold(payload):
     row=_get(payload.get('id'));reason=payload.get('reason')
     if reason not in REASONS or reason=='receipt_write':raise ValueError('Motivo inválido.')
     if row['stage']=='confirmed':raise ValueError('Um agendamento confirmado não pode voltar para envio.')
-    with core.db() as c:c.execute("UPDATE story_native_attempts SET stage='uncertain',reason=?,updated_at=? WHERE id=?",(reason,core.stamp(),row['id']))
+    with core.db() as c:
+        changed=c.execute("UPDATE story_native_attempts SET stage='uncertain',reason=?,updated_at=? WHERE id=? AND stage=? AND receipt IS NULL",
+                          (reason,core.stamp(),row['id'],row['stage'])).rowcount
+    if not changed:raise ValueError('A tentativa mudou durante a conferência. Atualize o painel antes de continuar.')
     return {'ok':True}
 
 
@@ -196,6 +206,8 @@ def tick():
 
 
 def state():
-    with core.db() as c:rows=[dict(r) for r in c.execute('SELECT id,media_id,handle,due_at,stage,reason,updated_at FROM story_native_attempts ORDER BY created_at DESC LIMIT 15')]
+    with core.db() as c:
+        rows=[dict(r) for r in c.execute('SELECT id,media_id,handle,due_at,stage,reason,updated_at FROM story_native_attempts ORDER BY created_at DESC LIMIT 15')]
+        unresolved=c.execute("SELECT COUNT(*) FROM story_native_attempts WHERE stage!='confirmed'").fetchone()[0]
     for row in rows:row.update(label=LABELS[row['stage']],message=REASONS.get(row['reason'],''))
-    return {'attempts':rows,'unresolved':sum(r['stage']!='confirmed' for r in rows),'posts_automatically':False}
+    return {'attempts':rows,'unresolved':unresolved,'posts_automatically':False}

@@ -125,6 +125,8 @@ def queue(identifier,now=False,*,planned_for=None,allow_archive=False):
         due=proposed if proposed>current else due
     with core.db() as c:
         c.execute('BEGIN IMMEDIATE')
+        if story_native.blocks_api(snapshot['content_key'],config['binding']['handle'],connection=c):
+            raise ValueError('Este capítulo entrou no TikTok Studio durante a preparação. Confira a tentativa existente.')
         prior=c.execute('SELECT id FROM story_publications WHERE account_id=? AND (content_key=? OR media_hash=?)',
             (account,snapshot['content_key'],snapshot['hash'])).fetchone()
         if prior:return {'id':prior['id'],'existing':True}

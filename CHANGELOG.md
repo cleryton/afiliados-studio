@@ -1,5 +1,12 @@
 # Alterações
 
+## 0.25.0-beta — 01/11/2026
+
+- Painel mostra a última observação do acompanhamento, o impedimento registrado e a necessidade de nova conferência após 12 horas. O registro não é apresentado como conexão ao vivo.
+- Próxima ação considera tentativas nativas pendentes e horários vencidos antes de sugerir outro envio. Contagens continuam vindo dos recibos reais.
+- Reservas simultâneas pelo Studio e pela API são conferidas na mesma transação de gravação. Uma atualização atrasada de falha não pode apagar um resultado já confirmado.
+- Leitura limitada do resumo local, sem expor campos arbitrários ou credenciais. Arquivos inválidos não derrubam o painel.
+
 ## 0.24.0-beta — 01/11/2026
 
 - Registro persistente das etapas de envio no TikTok Studio, com uma única permissão de solicitação, ordem dos capítulos e proteção contra duplicação por outra integração.

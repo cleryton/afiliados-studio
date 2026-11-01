@@ -1,4 +1,4 @@
-# Continuidade dos envios no TikTok Studio — 0.24
+# Continuidade dos envios no TikTok Studio — 0.25
 
 O acesso à pasta de vídeos e o login no TikTok são requisitos separados. O acesso foi conferido no caminho original em um teste local sem transmissão ao TikTok. A integração usa a opção oficial de pasta autorizada. O teste não comprova publicação.
 
@@ -7,6 +7,16 @@ O acesso à pasta de vídeos e o login no TikTok são requisitos separados. O ac
 O estúdio passa a registrar a preparação, o início do upload, a conferência da configuração, a solicitação de agendamento e a confirmação observada. As etapas sobrevivem ao reinício do aplicativo. Repetir uma chamada de preparação retorna a mesma tentativa sem conceder outro upload.
 
 Uma solicitação de agendamento só recebe permissão de execução uma vez. Se a resposta se perder, a rotina precisa conferir a lista do TikTok; não recebe outro disparo automaticamente. Uma tentativa de Studio também impede uma cópia pela integração opcional de API, inclusive se o recibo local ainda não tiver sido gravado.
+
+As duas filas conferem reservas concorrentes dentro da transação de gravação. Se uma rotina ganhar a reserva enquanto a outra valida os arquivos, a segunda é retida antes de receber permissão de envio. Uma atualização atrasada de interrupção também não pode rebaixar uma confirmação já salva.
+
+## Acompanhamento visível no painel
+
+Quando o assistente grava `data/story-week/automation-status.json`, o painel mostra a observação somente para a semana e o perfil atuais. Esse resumo usa códigos fixos, data com fuso e limite de 8 KB. Campos extras, textos de erro e credenciais não são exibidos. Arquivos inválidos geram um aviso de indisponibilidade sem interromper o painel.
+
+Uma observação com mais de 12 horas exige nova conferência e não é apresentada como estado atual do navegador. O aplicativo não conclui que o assistente está ativo pela existência desse arquivo. O acompanhamento depende do Codex em execução, do notebook ligado e da sessão autorizada. Um resumo dizendo que terminou não substitui os recibos dos capítulos.
+
+A próxima ação prioriza a tentativa pendente do capítulo, a pausa e um horário vencido antes de sugerir continuar. Não compensa uma proposta vencida publicando imediatamente.
 
 O primeiro capítulo ainda sem registro da semana tem prioridade. Perfil, pausa, proposta de data, arquivos, link e oferta são conferidos antes de avançar. O operador precisa observar legenda correspondente, visibilidade pública, marcação de IA, publicidade de terceiros quando houver oferta e verificações sem problemas. Uma proposta vencida exige revisão.
 

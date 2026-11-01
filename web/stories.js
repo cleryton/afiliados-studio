@@ -8,6 +8,7 @@ function storiesPage(){
  const allowed=data.products.filter(p=>data.automation.products.some(a=>a.product_id===p.id&&a.active&&a.approved));
  return heading('Histórias no TikTok','Ficção original em episódios, preparada no seu notebook.')+`
  ${storyOperationsPanel(s)}
+ ${storyFollowupPanel(s.followup)}
  ${storyNativePanel(s.native)}
  ${storyCarePanel(s.care,s.week)}
  ${storyDirectorPanel(s)}
@@ -48,6 +49,11 @@ document.addEventListener('click',async event=>{
 });
 
 let publishingSetupFocused=false;
+function storyFollowupPanel(followup){
+ if(!followup)return '';
+ const observed=followup.observed_at?new Date(followup.observed_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):null;
+ return `<section class="panel story-offer" aria-labelledby="story-followup-title"><p class="eyebrow">ACOMPANHAMENTO PELO ASSISTENTE</p><h2 id="story-followup-title">${followup.stale?'Conferência precisa ser atualizada':'Última observação da operação'}</h2><p role="status">${esc(followup.message)}</p>${observed?`<p class="field-help">Observado em ${esc(observed)} · São Paulo. O registro não é uma consulta ao vivo da conta.</p>`:''}<p class="field-help">O acompanhamento depende do Codex em execução, do notebook ligado e da sessão autorizada. Login e verificações são feitos pelo titular. Os totais acima usam os recibos dos capítulos; esta observação não confirma envios.</p></section>`;
+}
 function storyNativePanel(native){
  if(!native?.attempts?.length)return '';
  return `<section class="panel story-offer" aria-labelledby="native-attempts-title"><p class="eyebrow">CONTINUIDADE DO ENVIO</p><h2 id="native-attempts-title">Tentativas no TikTok Studio</h2><p>O registro mantém as etapas ao reiniciar. Uma solicitação sem resultado confirmado precisa ser conferida no TikTok antes de outro envio.</p><div class="story-post-list">${native.attempts.map(a=>`<article><strong>${esc(a.label)}</strong><p>@${esc(a.handle)} · Proposta: ${esc(new Date(a.due_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}))}</p>${a.message?`<p role="status">${esc(a.message)}</p>`:''}</article>`).join('')}</div><p class="field-help">Estas etapas não executam o navegador sozinhas. O recibo de agendamento é salvo após conferência do operador na lista recarregada do TikTok. Isso ainda não confirma a publicação efetiva.</p></section>`;
@@ -61,15 +67,20 @@ function storyOperationsPanel(s){
  const confirmed=week.slots.filter(published).length,registered=week.slots.filter(scheduled).length;
  const remaining=week.slots.length-confirmed-registered;
  const attention=jobs.some(j=>['uncertain','blocked','needs_review','draft'].includes(j.status));
+ const pending=week.slots.find(slot=>!published(slot)&&!scheduled(slot));
+ const attempt=(s.native?.attempts||[]).find(a=>a.media_id===pending?.media_id&&a.handle===s.target_handle&&a.stage!=='confirmed');
  let next='Confira os vídeos agendados no TikTok Studio. Um horário passado ainda precisa de confirmação de publicação.';
  if(remaining){
   if(week.handle!==s.target_handle)next='O perfil indicado mudou. Confira o destino da coleção antes de continuar.';
+  else if(attempt)next=attempt.message||'Há uma tentativa em andamento. Confira a prévia ou a lista do TikTok antes de repetir qualquer envio.';
   else if(attention)next='Confira o pedido retido ou sem confirmação antes de enviar qualquer arquivo novamente.';
   else if(week.paused)next='Retome o cuidado e a criação quando estiver pronto para continuar.';
+  else if(pending&&new Date(pending.due_at)<=new Date())next='O horário do próximo capítulo passou. Revise a agenda; o sistema não deve publicar imediatamente para compensar.';
   else if(week.slots.some(slot=>slot.status==='error'))next='Revise o capítulo que precisa de atenção. A sequência não deve pular esse item.';
   else if(week.ready<week.slots.length)next='Acompanhe a montagem dos próximos capítulos. Não é necessário gerar novamente os arquivos já concluídos.';
   else if(s.publishing?.connected&&s.publishing.enabled&&s.publishing.auto_3d)next='A integração está ativa: a fila seguirá a ordem da semana e aguardará a confirmação de cada envio.';
-  else next='Envie os arquivos pendentes ao TikTok Studio e confirme o agendamento lá. A conexão gratuita de postagem automática do aplicativo continua pendente.';
+  else if(s.followup&&!s.followup.stale&&s.followup.code!=='complete')next=s.followup.message;
+  else next='Continue pelo próximo capítulo no TikTok Studio. O assistente pode conduzir o envio com a pasta autorizada e a sessão conectada.';
  }
  return `<section class="panel story-offer" aria-labelledby="story-operations-title"><p class="eyebrow">SUA OPERAÇÃO DA SEMANA</p><h2 id="story-operations-title">Acompanhe sua semana em um lugar</h2><p>Perfil do projeto: <strong>@${esc(s.target_handle||'não configurado')}</strong>. Coleção iniciada em ${esc(week.start_date.split('-').reverse().join('/'))}.</p><dl class="story-operations-grid">${[[week.ready,'Vídeos prontos no notebook'],[registered,'Agendamentos registrados'],[confirmed,'Publicações confirmadas'],[remaining,'Sem confirmação no TikTok']].map(([n,label])=>`<div><dt>${label}</dt><dd>${n}</dd></div>`).join('')}</dl><p role="status">Próxima ação: ${esc(next)}</p><div class="download-row"><a class="button primary" href="https://www.tiktok.com/tiktokstudio/content" target="_blank" rel="noopener noreferrer">Conferir no TikTok Studio ↗</a><a class="button subtle" href="/guia-operacao.md" target="_blank" rel="noopener noreferrer">Abrir guia para as férias ↗</a></div><p class="field-help">Os registros deste painel não são sincronizados automaticamente com a conta. Datas propostas e arquivos prontos não contam como publicações. O alcance e as comissões dependem de resultados reais.</p></section>`;
 }

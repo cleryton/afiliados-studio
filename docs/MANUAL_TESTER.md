@@ -1,6 +1,6 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.24.0-beta · atualizado em 01/11/2026.
+Versão 0.25.0-beta · atualizado em 01/11/2026.
 
 Este roteiro permite testar instalação, roteiro, vídeo, narração, legendas e recuperação de falhas. O primeiro teste não exige conta de afiliado, Google, Buffer nem assinatura de IA.
 
@@ -393,6 +393,8 @@ Feche e abra o Codex antes do teste de envio. A configuração em disco e a inte
 
 
 ## Continuidade do TikTok Studio (0.24)
+
+Na versão 0.25, a operação também mostra a última observação do assistente, quando houver resumo para a semana atual. Confira a data: depois de 12 horas o aviso pede nova conferência. Essa seção não indica uma conexão ao vivo nem altera os totais de agendamentos. Um registro antigo de login deixa de bloquear a orientação quando todos os capítulos têm recibos. O modo tester não importa o resumo nem as credenciais do modo normal.
 
 Confira os testes de `test_story_native.py`: preparação idempotente, ordem da semana, interrupção e reinício, tentativa de repetição por outra integração, recusa de perfil e legenda alterados, confirmação do destino recarregado, reparo de recibo após falha no disco e retomada de uma prévia sem novo upload. O modo tester deve recusar o início, o avanço, a retenção e a confirmação. Uma solicitação marcada como iniciada não pode receber outra permissão de disparo. As respostas simuladas não são prova de envio real.
 

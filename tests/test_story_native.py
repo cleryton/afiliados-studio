@@ -1,8 +1,10 @@
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 from PIL import Image
@@ -157,6 +159,46 @@ class NativeAttemptTests(unittest.TestCase):
                                    (native.confirm,self.confirmation(identifier)),(native.hold,{'id':identifier,'reason':'login'}),
                                    (native.resume_preview,{'id':identifier})):
                 with self.subTest(action=action.__name__),self.assertRaises(ValueError):action(payload)
+
+    def test_hold_cannot_erase_confirmation_written_after_its_initial_read(self):
+        identifier=self.submitted();stale=native._get(identifier)
+        native.confirm(self.confirmation(identifier))
+        with patch.object(native,'_get',return_value=stale),self.assertRaises(ValueError):
+            native.hold({'id':identifier,'reason':'network'})
+        self.assertEqual(native._get(identifier)['stage'],'confirmed')
+
+    def test_api_queue_created_during_native_preparation_prevents_upload_permission(self):
+        story_publishing.put({'enabled':True,'binding':{'account_id':'fixture-id','handle':'fiction_project'}})
+        snapshot=native.story_delivery.snapshot
+        def concurrent_queue(media):
+            proof=snapshot(media)
+            story_publishing.queue(media,allow_archive=True)
+            return proof
+        with patch.object(native.story_delivery,'snapshot',side_effect=concurrent_queue),self.assertRaises(ValueError):
+            self.begin()
+        self.assertEqual(native.state()['attempts'],[])
+
+    def test_native_reservation_between_api_precheck_and_insert_prevents_api_queue(self):
+        story_publishing.put({'enabled':True,'binding':{'account_id':'fixture-id','handle':'fiction_project'}})
+        blocked=native.blocks_api
+        def concurrent_begin(content,handle,**kwargs):
+            if not kwargs:
+                self.begin()
+                return False  # The earlier check lost the race to the reservation.
+            return blocked(content,handle,**kwargs)
+        with patch.object(native,'blocks_api',side_effect=concurrent_begin),self.assertRaises(ValueError):
+            story_publishing.queue('2'*32,allow_archive=True)
+        with core.db() as c:self.assertEqual(c.execute('SELECT COUNT(*) FROM story_publications').fetchone()[0],0)
+
+    def test_simultaneous_submission_checks_grant_exactly_one_dispatch(self):
+        identifier=self.begin()['id']
+        for phase in ('upload_started','details_checked'):native.advance(self.evidence(identifier,phase))
+        barrier=threading.Barrier(2);unchanged=native._unchanged
+        def check(row):
+            proof=unchanged(row);barrier.wait(timeout=10);return proof
+        with patch.object(native,'_unchanged',side_effect=check),ThreadPoolExecutor(max_workers=2) as pool:
+            results=list(pool.map(lambda _:native.advance(self.evidence(identifier,'submission_started')),range(2)))
+        self.assertEqual(sum(r['may_dispatch'] for r in results),1)
 
 
 if __name__=='__main__':unittest.main()
