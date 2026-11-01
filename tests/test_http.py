@@ -87,6 +87,18 @@ class HTTPTests(unittest.TestCase):
         create.assert_called_once()
         self.assertEqual(self.request('/stories/'+'a'*32+'/speech-0.wav')[0],404)
 
+    def test_native_checkpoints_require_csrf_and_route_only_authorized_local_requests(self):
+        import story_native
+        for path,name in (('begin','begin'),('advance','advance'),('hold','hold'),('resume-preview','resume_preview'),('confirm','confirm')):
+            url='/api/stories/native/'+path
+            with self.subTest(path=path),patch.object(story_native,name,return_value={'ok':True}) as action:
+                self.assertEqual(self.request(url,{})[0],403)
+                self.assertEqual(self.request(url,{}, {'X-Studio-Token':app.TOKEN,'Origin':'https://example.com'})[0],403)
+                action.assert_not_called()
+                payload={'id':'fixture-not-a-real-attempt'}
+                self.assertEqual(self.request(url,payload,{'X-Studio-Token':app.TOKEN})[0],200)
+                action.assert_called_once_with(payload)
+
     def test_story_growth_record_is_local_and_csrf_protected(self):
         import story_growth
         self.assertEqual(self.request('/api/stories/growth/record',{})[0],403)

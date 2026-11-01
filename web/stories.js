@@ -8,6 +8,7 @@ function storiesPage(){
  const allowed=data.products.filter(p=>data.automation.products.some(a=>a.product_id===p.id&&a.active&&a.approved));
  return heading('Histórias no TikTok','Ficção original em episódios, preparada no seu notebook.')+`
  ${storyOperationsPanel(s)}
+ ${storyNativePanel(s.native)}
  ${storyCarePanel(s.care,s.week)}
  ${storyDirectorPanel(s)}
  ${storyWeekPanel(s.week)}
@@ -47,6 +48,10 @@ document.addEventListener('click',async event=>{
 });
 
 let publishingSetupFocused=false;
+function storyNativePanel(native){
+ if(!native?.attempts?.length)return '';
+ return `<section class="panel story-offer" aria-labelledby="native-attempts-title"><p class="eyebrow">CONTINUIDADE DO ENVIO</p><h2 id="native-attempts-title">Tentativas no TikTok Studio</h2><p>O registro mantém as etapas ao reiniciar. Uma solicitação sem resultado confirmado precisa ser conferida no TikTok antes de outro envio.</p><div class="story-post-list">${native.attempts.map(a=>`<article><strong>${esc(a.label)}</strong><p>@${esc(a.handle)} · Proposta: ${esc(new Date(a.due_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}))}</p>${a.message?`<p role="status">${esc(a.message)}</p>`:''}</article>`).join('')}</div><p class="field-help">Estas etapas não executam o navegador sozinhas. O recibo de agendamento é salvo após conferência do operador na lista recarregada do TikTok. Isso ainda não confirma a publicação efetiva.</p></section>`;
+}
 function storyOperationsPanel(s){
  const week=s.week;if(!week)return '';
  const jobs=s.publishing?.handle===s.target_handle?s.publishing.jobs||[]:[];

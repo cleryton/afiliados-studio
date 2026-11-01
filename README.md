@@ -8,7 +8,7 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** fontes na versão 0.23.0-beta. Geração local de histórias e agendamento nativo de uma versão 3D no TikTok Studio foram conferidos em conta do projeto. Isso não comprova alcance, vendas ou comissões. O YouTube pessoal e a rotina antiga de afiliados permanecem desativados nesta operação. A postagem automática por integração TikTok continua pendente de acesso compatível. Ofertas comerciais exigem afiliação aprovada e link próprio; lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** fontes na versão 0.24.0-beta. Geração local de histórias e agendamento nativo de uma versão 3D no TikTok Studio foram conferidos em conta do projeto. Isso não comprova alcance, vendas ou comissões. O YouTube pessoal e a rotina antiga de afiliados permanecem desativados nesta operação. A postagem automática por integração TikTok continua pendente de acesso compatível. Ofertas comerciais exigem afiliação aprovada e link próprio; lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 ## Direção automática de conteúdo
 
@@ -266,3 +266,8 @@ Testes de publicação usam respostas simuladas, sem uploads em contas reais. Ar
 ### Acesso do navegador aos vídeos
 
 Se a integração recusar o MP4 como fora das pastas autorizadas, use **reparar_acesso_videos.bat**. O reparador inclui somente `data/stories` na opção oficial de pastas permitidas do Chrome DevTools e preserva as demais configurações. Reabra o Codex para recarregar a integração. Nenhum vídeo é enviado por esse reparo. Veja [Envio sem selecionar cada arquivo](docs/ACESSO_AOS_VIDEOS.md).
+
+
+### Continuidade no TikTok Studio (0.24)
+
+As tentativas de envio agora mantêm etapas persistentes, com uma única autorização de solicitação por capítulo, conferência de arquivos e bloqueio de cópias por outra integração. Um resultado incerto exige conferência no destino. O aplicativo registra observações do operador; esses caminhos não controlam o navegador sozinhos. Veja [Continuidade dos envios](docs/CONTINUIDADE_TIKTOK_STUDIO.md).

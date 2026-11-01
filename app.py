@@ -226,6 +226,14 @@ class Handler(BaseHTTPRequestHandler):
             external={'/api/setup/start','/api/youtube/credentials','/api/youtube/connect','/api/youtube/verify','/api/youtube/settings','/api/youtube/test/start','/api/automation/connect','/api/automation/install','/api/stories/publishing/connect','/api/stories/publishing/settings','/api/stories/publishing/queue'}
             if core.TESTER and path in external:
                 raise ValueError('O modo tester bloqueia contas e envios externos. Use a demonstração local; a publicação real exige iniciar.bat.')
+            if path in ('/api/stories/native/begin','/api/stories/native/advance','/api/stories/native/confirm','/api/stories/native/hold','/api/stories/native/resume-preview'):
+                import story_native
+                if path.endswith('/begin'):result=story_native.begin(payload)
+                elif path.endswith('/advance'):result=story_native.advance(payload)
+                elif path.endswith('/confirm'):result=story_native.confirm(payload)
+                elif path.endswith('/resume-preview'):result=story_native.resume_preview(payload)
+                else:result=story_native.hold(payload)
+                return self.respond(200,result)
             if path=='/api/tester/demo':
                 return self.respond(201,support.create_demo())
             if path=='/api/stories/pilot':
@@ -454,7 +462,7 @@ def serve(args):
     except OSError:
         print(f'A porta {args.port} está ocupada. Use python app.py --port 8766')
         raise SystemExit(4)
-    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing,story_week,story_care
+    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing,story_week,story_care,story_native
     runtime_service.start([
         ('planejamento',autopilot.cycle,60,300),
         ('produção',worker,2,600),
@@ -467,6 +475,7 @@ def serve(args):
         ('TikTok das histórias',story_publishing.tick,15,180),
         ('Preparação da semana 3D',story_week.tick,15,180),
         ('Cuidado automático das histórias',story_care.tick,60,180),
+        ('Registros do TikTok Studio',story_native.tick,60,180),
     ],STOP)
     url = f'http://127.0.0.1:{args.port}'
     print(f'Afiliados Studio {VERSION} | '+('MODO TESTER · PUBLICAÇÃO BLOQUEADA | ' if core.TESTER else '')+f'{url} | Ctrl+C para encerrar', flush=True)

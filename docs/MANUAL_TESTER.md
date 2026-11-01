@@ -1,6 +1,6 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.23.0-beta · atualizado em 31/10/2026.
+Versão 0.24.0-beta · atualizado em 01/11/2026.
 
 Este roteiro permite testar instalação, roteiro, vídeo, narração, legendas e recuperação de falhas. O primeiro teste não exige conta de afiliado, Google, Buffer nem assinatura de IA.
 
@@ -390,3 +390,10 @@ Na integração opcional de postagem, os testes automatizados devem demonstrar a
 Execute primeiro `python scripts/configure_browser_access.py` para conferir sem alterar a configuração. O caminho informado deve terminar em `data/stories` dentro do projeto. Na configuração real autorizada, execute **reparar_acesso_videos.bat** ou passe `--apply`. Confira a cópia de recuperação junto do arquivo da integração, a preservação dos outros servidores e a ausência de qualquer opção de acesso irrestrito. Repetir não deve duplicar a pasta.
 
 Feche e abra o Codex antes do teste de envio. A configuração em disco e a integração em execução são estados diferentes. Um erro persistente não autoriza copiar o MP4 para outra pasta, desativar o verificador ou expor os arquivos por túnel. A comprovação exige que o comando normal de upload aceite o caminho original. O teste de link de pasta é dispensado quando o Windows não permite criar links; as verificações de caminho continuam no reparador.
+
+
+## Continuidade do TikTok Studio (0.24)
+
+Confira os testes de `test_story_native.py`: preparação idempotente, ordem da semana, interrupção e reinício, tentativa de repetição por outra integração, recusa de perfil e legenda alterados, confirmação do destino recarregado, reparo de recibo após falha no disco e retomada de uma prévia sem novo upload. O modo tester deve recusar o início, o avanço, a retenção e a confirmação. Uma solicitação marcada como iniciada não pode receber outra permissão de disparo. As respostas simuladas não são prova de envio real.
+
+No painel, a seção Tentativas no TikTok Studio deve distinguir preparação, envio do arquivo, configuração conferida, solicitação sem confirmação e agendamento registrado. Reiniciar deve preservar essas etapas. O registro depende das observações do operador e não comprova publicação pública.

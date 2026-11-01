@@ -112,6 +112,9 @@ def queue(identifier,now=False,*,planned_for=None,allow_archive=False):
     import story_library
     if story_library.native_post_exists(snapshot['content_key'], config['binding']['handle']):
         raise ValueError('Este capítulo já tem registro de postagem ou agendamento no TikTok Studio. Confira o destino; não haverá novo envio.')
+    import story_native
+    if story_native.blocks_api(snapshot['content_key'],config['binding']['handle']):
+        raise ValueError('Este capítulo tem uma tentativa no TikTok Studio. Confira o pedido original antes de usar outra integração.')
     due=current if now else current.replace(hour=config['hour'],minute=0,second=0,microsecond=0)
     if not now and due<=current:due+=timedelta(days=1)
     if planned_for is not None:
@@ -276,6 +279,9 @@ def tick():
         if story_delivery.target().lower()!=binding['handle'].lower():raise ValueError('O perfil exclusivo do projeto mudou. Envio retido.')
         if story_library.native_post_exists(snapshot['content_key'],binding['handle']):
             raise ValueError('Este capítulo já tem registro no TikTok Studio. Nenhum novo upload foi feito.')
+        import story_native
+        if story_native.blocks_api(snapshot['content_key'],binding['handle']):
+            raise ValueError('Há uma tentativa do TikTok Studio para este capítulo. Não será transmitida outra cópia pela API.')
         check_week_sequence(row,binding)
         with core.db() as c:
             c.execute('UPDATE story_publications SET attempted_at=? WHERE id=?',(core.stamp(),row['id']))

@@ -32,6 +32,8 @@ def init():
     story_growth.init()
     import story_week
     story_week.init()
+    import story_native
+    story_native.init()
 
 
 def create_pilot():
@@ -70,10 +72,11 @@ def state():
     import story_delivery
     import story_week
     import story_care
+    import story_native
     offer=next((row['offer'] for row in episodes if row['offer'] and row['offer_current']),None)
     library=story_library.state()
     for row in library:row['package']=story_delivery.info(row['id']) if not row['receipt'] else None
-    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'animation_library':library,'week':story_week.state(),'care':story_care.state(),'publishing':publishing,'growth':story_growth.state(offer),'publishing_connected':publishing['connected'],'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
+    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'animation_library':library,'week':story_week.state(),'care':story_care.state(),'native':story_native.state(),'publishing':publishing,'growth':story_growth.state(offer),'publishing_connected':publishing['connected'],'target_handle':profile['value'] if profile else '', 'assets_ready':assets_ready,
             'destination':'TikTok','notice':'Criação local de ficção. Confira a conexão e os pedidos na seção de postagem. Nenhum episódio desta fila é enviado ao YouTube ou a contas pessoais.'}
 
 

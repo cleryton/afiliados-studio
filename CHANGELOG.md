@@ -1,5 +1,12 @@
 # Alterações
 
+## 0.24.0-beta — 01/11/2026
+
+- Registro persistente das etapas de envio no TikTok Studio, com uma única permissão de solicitação, ordem dos capítulos e proteção contra duplicação por outra integração.
+- Retomada de uma prévia observada sem conceder outro upload. Solicitações incertas exigem conferência do destino.
+- Confirmação baseada na observação do operador após recarregar a lista do TikTok; recibos ausentes podem ser recuperados do resultado já registrado sem retransmitir.
+- Painel de continuidade e documentação dos limites: login e verificações pertencem ao titular; o registro de etapas não executa o navegador sozinho.
+
 ## Após 0.23 — 31/10/2026
 
 - Reparador da autorização de arquivos do navegador: usa a opção oficial `--workspace` com somente `data/stories`, versão fixa, cópia de recuperação, conferência prévia e aplicação idempotente.

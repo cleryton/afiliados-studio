@@ -119,6 +119,8 @@ def cleanup(execute=False):
     rows = entries();latest = latest_3d(rows);protected = {r['id'] for r in latest.values()}
     with core.db() as c:
         protected.update(r['media_id'] for r in c.execute('SELECT media_id FROM story_publications'))
+        if c.execute("SELECT 1 FROM sqlite_master WHERE name='story_native_attempts'").fetchone():
+            protected.update(r['media_id'] for r in c.execute('SELECT media_id FROM story_native_attempts'))
         protected.update(r['id'] for r in c.execute("SELECT id FROM story_episodes WHERE status IN ('queued','rendering')"))
         if c.execute("SELECT 1 FROM sqlite_master WHERE name='story_week_slots'").fetchone():
             protected.update(r['media_id'] for r in c.execute("SELECT media_id FROM story_week_slots WHERE media_id!=''"))
