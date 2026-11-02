@@ -1,5 +1,9 @@
 # Alterações
 
+## 0.28.1-beta — 02/11/2026
+
+- O encerramento normal aguarda até 15 segundos pela leitura do painel ampliado, preservando a conferência de instalação, o token da sessão e a consulta rápida de disponibilidade. Evita interrupção prematura quando a biblioteca semanal cresce.
+
 ## 0.28.0-beta — 02/11/2026
 
 - Ampliação de 21 para 28 histórias: sete mistérios originais às 15h, preservando os arquivos, horários, legendas e recibos anteriores.

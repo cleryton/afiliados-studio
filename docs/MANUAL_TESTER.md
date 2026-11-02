@@ -1,6 +1,6 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.28.0-beta · atualizado em 02/11/2026.
+Versão 0.28.1-beta · atualizado em 02/11/2026.
 
 Para a ampliação de 21 para 28 horários, consulte [Quatro histórias por dia](QUATRO_VIDEOS_POR_DIA.md). Os 21 registros anteriores devem permanecer intactos. Novas propostas só contam como agendadas depois da conferência no TikTok.
 

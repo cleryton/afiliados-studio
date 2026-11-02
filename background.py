@@ -21,8 +21,8 @@ def installation_id():
     return hashlib.sha256(str(core.DATA.resolve()).casefold().encode()).hexdigest()[:24]
 
 
-def request(port,path,body=None,token=None):
-    connection=http.client.HTTPConnection('127.0.0.1',port,timeout=3)
+def request(port,path,body=None,token=None,*,timeout=3):
+    connection=http.client.HTTPConnection('127.0.0.1',port,timeout=timeout)
     headers={}
     if body is not None:headers={'Content-Type':'application/json','X-Studio-Token':token or ''}
     try:
@@ -63,7 +63,7 @@ def start(port=8765,open_browser=False):
 
 def stop(port=8765):
     if not health(port):return {'running':False}
-    state=request(port,'/api/state')
+    state=request(port,'/api/state',timeout=15)
     request(port,'/api/system/exit',{},state['token'])
     deadline=time.monotonic()+8
     while time.monotonic()<deadline:
