@@ -259,6 +259,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/week/expand':
                 import story_week
                 return self.respond(200,story_week.expand(payload))
+            if path=='/api/stories/week/expand-four':
+                import story_week
+                return self.respond(200,story_week.expand_four(payload))
             if path=='/api/stories/week/resume':
                 import story_week
                 return self.respond(200,story_week.resume(payload))

@@ -1,5 +1,11 @@
 # Alterações
 
+## 0.28.0-beta — 02/11/2026
+
+- Ampliação de 21 para 28 histórias: sete mistérios originais às 15h, preservando os arquivos, horários, legendas e recibos anteriores.
+- Novos episódios podem usar os clipes locais de caminhada, entrega da chave e revelação do desenho, com conferência do vídeo, projeto e medidas do movimento. Narração e montagem são produzidas para cada roteiro.
+- Preparação idempotente, com retenção de horários vencidos, colisões, alterações de oferta e pedidos existentes. Contagens de arquivos e registros do TikTok continuam separadas.
+
 ## 0.27.0-beta — 01/11/2026
 
 - Três ações originais em 3D: caminhada até a porta, entrega de uma chave e revelação de um desenho. Articulações dos braços e pernas preservam as proporções dos modelos, com verificações de alcance e apoio dos pés a cada quadro.

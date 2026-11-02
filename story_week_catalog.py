@@ -1,8 +1,9 @@
 """Finite original sequel; global episode numbers preserve posting order."""
-NUMBERS=tuple(range(1,30))
+NUMBERS=tuple(range(1,37))
 WEEK_NUMBERS=tuple(range(2,9))
 NEXT_NUMBERS=tuple(range(9,16))
 EXTRA_NUMBERS=tuple(range(16,30))
+FOUR_NUMBERS=tuple(range(30,37))
 STORIES={
 4:{'title':'O desenho com uma porta a mais','question':'Você procuraria a porta que não aparece no corredor?','scenes':[
  {'visual':'drawing','text':'O desenho mostrava o apartamento doze. Mas havia uma porta a mais.'},
@@ -106,6 +107,8 @@ for _number,_story in NEW_STORIES.items():
 
 from story_extra_catalog import EXTRA_STORIES
 STORIES.update(EXTRA_STORIES)
+from story_four_catalog import FOUR_STORIES
+STORIES.update(FOUR_STORIES)
 
 
 def caption(number,offer,story=None):

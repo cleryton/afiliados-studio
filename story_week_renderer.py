@@ -1,6 +1,8 @@
 """New weekly stories with verified original 3D motion and fresh narration."""
 import hashlib
 import json
+import math
+from pathlib import Path
 import shutil
 import subprocess
 from uuid import uuid4
@@ -77,7 +79,9 @@ def render(number,offer,slot_id,directed=None):
         if not directed or not directed.get('report'):raise ValueError('Falta o plano editorial deste episódio.')
         story,report=story_director.plan(STORIES[number],directed['report']['policy'])
         if story!=directed['story'] or report!=directed['report']:raise ValueError('O plano editorial mudou; confira a preparação.')
-    bank=scene_bank();workspace=original/'story-week'/'renders'/identifier;clips=workspace/'story-clips';clips.mkdir(parents=True)
+    bank=scene_bank()
+    if number>=30:bank=action_variants(bank)
+    workspace=original/'story-week'/'renders'/identifier;clips=workspace/'story-clips';clips.mkdir(parents=True)
     manifest={};sources=[]
     for index,scene in enumerate(story['scenes'],1):
         item=bank[scene['visual']];name=f'episode-{number}-scene-{index}.mp4'
@@ -89,7 +93,7 @@ def render(number,offer,slot_id,directed=None):
     episode={'id':identifier,'number':number,'title':story['title'],'series_title':story.get('arc','A chave do 12 · O último desenho'),
              'scenes':json.dumps(story['scenes'],ensure_ascii=False),'offer':offer,'offer_style':'brief'}
     if directed:
-        episode.update(director=directed['report'],overlay_title='SEGREDOS DO 12',display_number=story['arc_number'])
+        episode.update(director=directed['report'],overlay_title='MISTÉRIOS DA VIZINHANÇA' if number>=30 else 'SEGREDOS DO 12',display_number=story['arc_number'])
     try:
         core.DATA=workspace;result=story_renderer.render(episode)
     finally:core.DATA=original
@@ -97,8 +101,9 @@ def render(number,offer,slot_id,directed=None):
     source=workspace/'stories'/identifier;target=original/'stories'/identifier;target.mkdir(parents=True)
     for name in ('video.mp4','poster.png','legenda.txt','legendas.srt','roteiro.json'):shutil.copy2(source/name,target/name)
     meta=json.loads((target/'roteiro.json').read_text(encoding='utf-8'))
+    rates=sorted({item.get('fps',12) for item in sources})
     meta.update({'animation_type':'original_procedural_3d','character_animation':True,'week_slot':slot_id,
-                 'animation_reuse':True,'native_animation_fps':12,'rendered_size':[540,960],
+                 'animation_reuse':True,'native_animation_fps':rates[0] if len(rates)==1 else None,'native_animation_frame_rates':rates,'rendered_size':[540,960],
                  'mouth_alignment':'reused_procedural_gestures_not_speech_aligned','animation_sources':sources,
                  'ai_images':False,'image_generation':'No raster imagery is visible in the reused 3D scenes.'})
     (target/'roteiro.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -120,3 +125,29 @@ def render(number,offer,slot_id,directed=None):
             if (not duplicate.is_symlink() and duplicate.resolve().parent==clips.resolve() and
                     hashlib.sha256(duplicate.read_bytes()).hexdigest()==item['sha256']):duplicate.unlink()
     return identifier
+
+
+def action_variants(bank):
+    """Use completed original action clips only for the new collection."""
+    import animation_demos
+    variants=dict(bank);mapping={'arrival':'door','handoff':'key','reveal':'drawing'}
+    for row in animation_demos.state():
+        folder=core.DATA/'stories'/row['id'];meta=story_library.read_json(folder/'roteiro.json',8192)
+        project=Path(meta.get('native_project',''))
+        if (not project.is_file() or project.is_symlink() or
+                not project.resolve().is_relative_to((core.DATA/'animation-demos').resolve())):
+            raise ValueError('O projeto original da cena precisa ser conferido.')
+        motion=story_library.read_json(project.parent/'motion-state.json')
+        if not motion or motion.get('action')!=row['action'] or motion.get('frames')!=108 or motion.get('fps')!=18:
+            raise ValueError('As medidas do movimento da cena estão indisponíveis.')
+        for key,limit in (('maximum_hand_target_error',.005),('maximum_planted_foot_height_error',.015),('maximum_planted_foot_slide_per_frame',.015)):
+            value=motion.get(key)
+            if type(value) not in (int,float) or not math.isfinite(value) or not 0<=value<=limit:
+                raise ValueError('A cena não passou na conferência de movimento.')
+        video=folder/'video.mp4'
+        digest=hashlib.sha256(video.read_bytes()).hexdigest()
+        if digest!=meta.get('sha256'):raise ValueError('O vídeo da cena mudou depois da geração.')
+        kind=mapping[row['action']]
+        variants[kind]={'path':video,'sha256':digest,'kind':kind,'project':project.parent.name,
+                        'action':row['action'],'fps':18}
+    return variants

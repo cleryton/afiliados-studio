@@ -1,6 +1,8 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.27.0-beta · atualizado em 01/11/2026.
+Versão 0.28.0-beta · atualizado em 02/11/2026.
+
+Para a ampliação de 21 para 28 horários, consulte [Quatro histórias por dia](QUATRO_VIDEOS_POR_DIA.md). Os 21 registros anteriores devem permanecer intactos. Novas propostas só contam como agendadas depois da conferência no TikTok.
 
 Para conferir os novos movimentos de caminhada, entrega de objeto e revelação de pista, consulte [Animações 3D](ANIMACOES_3D.md). Após uma produção local concluída, as três cenas devem reproduzir no painel e permitir download; são clipes sem áudio. O teste não deve alterar capítulos ou contagens de agendamentos.
 

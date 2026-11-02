@@ -13,7 +13,7 @@ from uuid import uuid4
 import core
 import story_library
 import story_delivery
-from story_week_catalog import WEEK_NUMBERS,NEXT_NUMBERS,EXTRA_NUMBERS,STORIES
+from story_week_catalog import WEEK_NUMBERS,NEXT_NUMBERS,EXTRA_NUMBERS,FOUR_NUMBERS,STORIES
 from instance_lock import InstanceLock
 
 MIN_FREE=256*1024**2
@@ -156,6 +156,54 @@ def expand(payload):
                       (uuid4().hex,identifier,number,due,'queued',core.stamp(),json.dumps(plans[number],ensure_ascii=False)))
         c.execute('UPDATE story_weeks SET enabled=1 WHERE id=?',(identifier,))
     return {'id':identifier,'existing':False,'added':14,'total':21}
+
+
+def expand_four(payload):
+    """Add seven original 15:00 films without changing the existing 21 slots."""
+    import story_offers
+    import story_director
+    import story_growth
+    import story_native
+    identifier=payload.get('id')
+    if not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier):raise ValueError('Semana inválida.')
+    handle=story_delivery.target()
+    feedback=story_director.policy(story_growth.state()['posts'],core.now())
+    plans={n:dict(zip(('story','report'),story_director.plan(STORIES[n],feedback))) for n in FOUR_NUMBERS}
+    with core.db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        week=c.execute('SELECT * FROM story_weeks ORDER BY created_at DESC LIMIT 1').fetchone()
+        if not week or week['id']!=identifier or week['handle']!=handle:raise ValueError('Confira a semana atual e o perfil de destino.')
+        if not story_offers.current(json.loads(week['offer'])):raise ValueError('A oferta da semana precisa estar autorizada.')
+        slots=[dict(r) for r in c.execute('SELECT * FROM story_week_slots WHERE week_id=?',(identifier,))]
+        base=[s for s in slots if s['number'] in NEXT_NUMBERS+EXTRA_NUMBERS]
+        if {s['number'] for s in base}!=set(NEXT_NUMBERS+EXTRA_NUMBERS):raise ValueError('Prepare primeiro as três histórias diárias.')
+        start=date.fromisoformat(week['start_date'])
+        proposed={n:datetime.combine(start+timedelta(days=i),datetime.min.time(),core.TZ).replace(hour=15).isoformat()
+                  for i,n in enumerate(FOUR_NUMBERS)}
+        existing=[s for s in slots if s['number'] in FOUR_NUMBERS]
+        if existing:
+            if len(existing)!=7 or len(slots)!=28 or any(s['due_at']!=proposed[s['number']] for s in existing):
+                raise ValueError('A ampliação existente exige conferência; nenhuma cópia será criada.')
+            return {'id':identifier,'existing':True,'added':0,'total':28}
+        if len(slots)!=21 or week['paused'] or any(s['status']!='ready' for s in base):
+            raise ValueError('Conclua os 21 arquivos anteriores e confira a pausa antes de ampliar.')
+        if c.execute('SELECT 1 FROM story_weeks WHERE enabled=1').fetchone():raise ValueError('Aguarde a produção em andamento.')
+        if not capacity():raise ValueError('Libere pelo menos 256 MB para produzir novos vídeos.')
+        if any(datetime.fromisoformat(due)<=core.now() for due in proposed.values()):
+            raise ValueError('Um horário adicional já passou. Revise a semana; não haverá publicação imediata.')
+        all_dates={r['due_at'] for r in c.execute('SELECT s.due_at FROM story_week_slots s JOIN story_weeks w ON w.id=s.week_id WHERE w.handle=?',(handle,))}
+        if set(proposed.values())&all_dates:raise ValueError('Um novo horário coincide com a agenda existente.')
+        for number in FOUR_NUMBERS:
+            key=f'3d:a-chave-do-12:{number}'
+            if story_library.native_post_exists(key,handle) or story_native.blocks_api(key,handle,connection=c):
+                raise ValueError('Uma destas histórias já tem pedido no TikTok. Confira o destino.')
+            if c.execute("SELECT 1 FROM story_publications WHERE content_key=? AND status!='cancelled'",(key,)).fetchone():
+                raise ValueError('Uma destas histórias já está em outra fila de postagem.')
+        for number,due in proposed.items():
+            c.execute('INSERT INTO story_week_slots(id,week_id,number,due_at,status,updated_at,creative_plan) VALUES(?,?,?,?,?,?,?)',
+                      (uuid4().hex,identifier,number,due,'queued',core.stamp(),json.dumps(plans[number],ensure_ascii=False)))
+        c.execute('UPDATE story_weeks SET enabled=1 WHERE id=?',(identifier,))
+    return {'id':identifier,'existing':False,'added':7,'total':28}
 
 
 def state():
