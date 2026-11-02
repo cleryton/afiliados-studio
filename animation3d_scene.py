@@ -365,6 +365,9 @@ def build(config):
             camera.location=loc;camera.rotation_euler=rot;camera_data.lens=lens;keyframe(camera,frame-1);camera_data.keyframe_insert(data_path='lens',frame=frame-1)
             camera.location=newloc;camera.rotation_euler=newrot;camera_data.lens=newlens;keyframe(camera,frame);camera_data.keyframe_insert(data_path='lens',frame=frame)
     scene.frame_set(1)
+    if config.get('prepare_only'):
+        return {'scene':scene,'lia':lia,'eva':eva,'davi':davi,'key':key,'drawing':drawing,
+                'door':hinge,'camera':camera,'animated':animated,'visible':visible}
     output=Path(config['output']);output.mkdir(parents=True,exist_ok=True)
     (output/'motion-state.json').write_text(json.dumps({'engine':scene.render.engine,'kind':kind,'world_up':'Z','character_front':'-Y',
         'objects':len(scene.objects),'meshes':sum(o.type=='MESH' for o in scene.objects),'frames':end,'fps':fps,'samples':samples,

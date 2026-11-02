@@ -1,5 +1,11 @@
 # Alterações
 
+## 0.27.0-beta — 01/11/2026
+
+- Três ações originais em 3D: caminhada até a porta, entrega de uma chave e revelação de um desenho. Articulações dos braços e pernas preservam as proporções dos modelos, com verificações de alcance e apoio dos pés a cada quadro.
+- Comando explícito de produção local e galeria para assistir e baixar os clipes sem áudio. Os projetos editáveis e as medições permanecem no notebook.
+- Demonstrações separadas dos capítulos e das filas de postagem. O catálogo só muda depois que os três MP4s são exportados e decodificados com sucesso.
+
 ## 0.26.1-beta — 01/11/2026
 
 - Uma única recuperação de falha explícita do seletor anterior à transferência, após conferir seletor vazio, arquivo não aceito e ausência no destino recarregado.

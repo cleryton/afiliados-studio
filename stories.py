@@ -53,6 +53,7 @@ def state():
     import story_offers
     import story_publishing
     from animation3d import preview_state
+    import animation_demos
     with core.db() as c:
         series=[dict(r) for r in c.execute('SELECT * FROM story_series ORDER BY created_at')]
         episodes=[dict(r) for r in c.execute('SELECT * FROM story_episodes ORDER BY series_id,number')]
@@ -78,7 +79,7 @@ def state():
     library=story_library.state()
     for row in library:row['package']=story_delivery.info(row['id']) if not row['receipt'] else None
     week=story_week.state();handle=profile['value'] if profile else ''
-    return {'series':series,'episodes':episodes,'animation_preview':preview_state(),'animation_library':library,'week':week,'followup':story_followup.state(week,handle),'care':story_care.state(),'native':story_native.state(),'publishing':publishing,'growth':story_growth.state(offer),'publishing_connected':publishing['connected'],'target_handle':handle, 'assets_ready':assets_ready,
+    return {'series':series,'episodes':episodes,'animation_demos':animation_demos.state(),'animation_preview':preview_state(),'animation_library':library,'week':week,'followup':story_followup.state(week,handle),'care':story_care.state(),'native':story_native.state(),'publishing':publishing,'growth':story_growth.state(offer),'publishing_connected':publishing['connected'],'target_handle':handle, 'assets_ready':assets_ready,
             'destination':'TikTok','notice':'Criação local de ficção. Confira a conexão e os pedidos na seção de postagem. Nenhum episódio desta fila é enviado ao YouTube ou a contas pessoais.'}
 
 

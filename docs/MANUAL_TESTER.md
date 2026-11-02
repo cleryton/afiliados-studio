@@ -1,6 +1,8 @@
 # Manual do usuário tester — Afiliados Studio
 
-Versão 0.26.1-beta · atualizado em 01/11/2026.
+Versão 0.27.0-beta · atualizado em 01/11/2026.
+
+Para conferir os novos movimentos de caminhada, entrega de objeto e revelação de pista, consulte [Animações 3D](ANIMACOES_3D.md). Após uma produção local concluída, as três cenas devem reproduzir no painel e permitir download; são clipes sem áudio. O teste não deve alterar capítulos ou contagens de agendamentos.
 
 Para a ampliação de sete para 21 horários, consulte [Três histórias por dia](TRES_VIDEOS_POR_DIA.md). A ação deve preservar os sete arquivos e recibos anteriores e acrescentar 14 roteiros sem criar cópias ao ser repetida. As propostas adicionais não contam como agendamentos confirmados.
 
