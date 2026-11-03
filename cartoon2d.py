@@ -389,8 +389,12 @@ def subtitle_layer(text):
 
 
 def frame(story,scene,u,t,text,progress):
-    im=background(story['key'],story['key']=='cat' and scene==5).copy()
-    ANIMATORS[story['key']](im,scene,u,t)
+    im=background(story['key'],story['key']=='cat' and (scene==5 or story.get('daytime',False))).copy()
+    if story.get('monthly'):
+        import cartoon_worlds
+        cartoon_worlds.draw(im,story,scene,u,t)
+    else:
+        ANIMATORS[story['key']](im,scene,u,t)
     # Scene-specific camera moves sit above actual joint and prop animation.
     zoom=1+(.035+.05*(scene%3))*ease(u)
     cw,ch=W/zoom,H/zoom
@@ -468,7 +472,7 @@ def narration(story,folder):
 
 def source_hash():
     digest=hashlib.sha256()
-    for name in ('cartoon2d.py','cartoon_catalog.py'):
+    for name in ('cartoon2d.py','cartoon_catalog.py','cartoon_worlds.py'):
         digest.update((core.ROOT/name).read_bytes())
     return digest.hexdigest()
 
@@ -543,6 +547,7 @@ def render_story(story,identifier,project):
     meta={'animation_type':'original_procedural_2d','title':story['title'],'key':story['key'],
           'genre':story['genre'],'voice':True,'fps':FPS,'size':[720,1280],'duration':sum(durations),
           'scenes':story['scenes'],'scene_durations':durations,'subtitle_timing_scenes':methods,
+          'script_sha256':hashlib.sha256(json.dumps(story,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
           'character_animation':True,'mouth_alignment':'expressions_not_speech_aligned',
           'sound_design':'original_local_synthesized_music_and_weather',
           'visual_source':'Original Pillow vector shapes, articulated characters and props; no third-party images.',

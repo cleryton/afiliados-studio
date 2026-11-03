@@ -57,6 +57,8 @@ def _get(identifier):
 
 def begin(payload):
     if core.TESTER:raise ValueError('O modo tester bloqueia tentativas de envio externo.')
+    import cartoon_month
+    if cartoon_month.owns(payload.get('media_id')):return cartoon_month.begin(payload)
     media=payload.get('media_id');handle=story_delivery.target()
     if payload.get('observed_handle')!=handle:raise ValueError('Confira o perfil no próprio TikTok antes de iniciar.')
     with core.db() as c:
@@ -84,6 +86,11 @@ def begin(payload):
 
 def _unchanged(row):
     if story_delivery.target()!=row['handle']:raise ValueError('O perfil mudou durante a tentativa.')
+    if row['content_key'].startswith('2d:month:'):
+        import cartoon_month
+        current=cartoon_month.snapshot(row['media_id'])
+        if current['fingerprint']!=row['fingerprint']:raise ValueError('A história ou a proposta de horário mudou; confira a tentativa no destino.')
+        return current
     current=story_delivery.snapshot(row['media_id'])
     if current['fingerprint']!=row['fingerprint']:raise ValueError('Os arquivos ou a oferta mudaram. Confira a tentativa existente no destino.')
     with core.db() as c:
@@ -212,6 +219,47 @@ def confirm(payload):
     if not changed and json.loads(_get(row['id'])['receipt'])['url']!=url:raise ValueError('Esta tentativa já foi confirmada com outro link.')
     row=_get(row['id']);_write_receipt(row)
     return {'ok':True,'existing':False,'url':url}
+
+
+def reconcile_owner(payload):
+    """Record an owner-reported out-of-band schedule, without inventing a dispatch."""
+    if core.TESTER:raise ValueError('O modo tester bloqueia registros externos.')
+    row=_get(payload.get('id'))
+    if not row['content_key'].startswith('2d:month:') or row['commercial']:
+        raise ValueError('Esta reconciliação vale somente para a coleção mensal de ficção sem oferta.')
+    if (payload.get('owner_reported_submission') is not True or payload.get('destination_reloaded') is not True or
+            payload.get('caption_matches') is not True or payload.get('public_visibility_observed') is not True or
+            payload.get('observed_handle')!=row['handle'] or payload.get('due_at')!=row['due_at'] or
+            story_delivery.target()!=row['handle']):raise ValueError('Confira o relato do titular, o perfil, a legenda, a visibilidade e a data na lista recarregada.')
+    url=payload.get('url','')
+    if not isinstance(url,str):raise ValueError('Link inválido.')
+    parts=urlsplit(url)
+    if (parts.scheme!='https' or parts.netloc!='www.tiktok.com' or parts.query or parts.fragment or
+            not re.fullmatch('/@'+re.escape(row['handle'])+'/video/[0-9]{15,24}',parts.path)):
+        raise ValueError('Link fora do perfil esperado.')
+    if row['stage']=='confirmed':
+        if json.loads(row['receipt'])['url']!=url:raise ValueError('Há outro recibo neste vídeo.')
+        return {'ok':True,'existing':True,'url':url}
+    if row['stage'] not in ('upload_started','uncertain') or row['submitted_at']:
+        raise ValueError('Confira o pedido existente pelo fluxo normal de confirmação.')
+    root=_folder(row);video=root/'video.mp4';caption_path=root/'legenda.txt'
+    if video.is_symlink() or caption_path.is_symlink():raise ValueError('Arquivo substituído por link.')
+    caption=' '.join(caption_path.read_text(encoding='utf-8').split())
+    if story_delivery.file_hash(video)!=row['source_sha256'] or hashlib.sha256(caption.encode()).hexdigest()!=row['caption_hash']:
+        raise ValueError('Os arquivos originais mudaram; confira o resultado antes de registrar.')
+    receipt={'media_id':row['media_id'],'handle':row['handle'],'status':'scheduled_confirmed','scheduled_for':row['due_at'],
+             'url':url,'source_sha256':row['source_sha256'],'caption_hash':row['caption_hash'],'content_key':row['content_key'],
+             'observed_at':core.stamp(),'publication_confirmed':False,'dispatch_count':None,'owner_reported_submission':True,
+             'confirmed_via':'Owner reported clicking Schedule; operator observed the matching native list after reload.',
+             'ai_label_confirmed_in_preview':None,'paid_partnership_confirmed_in_preview':False,
+             'configuration_note':'AI label after owner submission was not observed; fiction and AI disclosure remain in the video and caption.'}
+    with core.db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        changed=c.execute("UPDATE story_native_attempts SET stage='confirmed',reason='',receipt=?,updated_at=? WHERE id=? AND stage IN ('upload_started','uncertain') AND submitted_at IS NULL AND receipt IS NULL",
+                          (json.dumps(receipt,ensure_ascii=False),core.stamp(),row['id'])).rowcount
+    if not changed:raise ValueError('A tentativa mudou durante a reconciliação. Confira o registro existente.')
+    _write_receipt(_get(row['id']))
+    return {'ok':True,'existing':False,'url':url,'ai_label_observation':'unknown'}
 
 
 def tick():

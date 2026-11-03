@@ -8,9 +8,11 @@ Para o TikTok, consulte [conta e limites atuais da publicação](docs/TIKTOK.md)
 
 Requer Python 3.11 ou superior (recomendado 3.12). Ao atualizar de uma versão anterior à 0.5, execute **instalar.bat** novamente para instalar as dependências corrigidas. Se houver um ambiente `.venv` com Python antigo, o instalador explica como recriá-lo sem apagar `data` e `data-tester`.
 
-**Situação atual:** fontes na versão 0.29.0-beta. Geração local de histórias e agendamento nativo de uma versão 3D no TikTok Studio foram conferidos em conta do projeto. Isso não comprova alcance, vendas ou comissões. O YouTube pessoal e a rotina antiga de afiliados permanecem desativados nesta operação. A postagem automática por integração TikTok continua pendente de acesso compatível. Ofertas comerciais exigem afiliação aprovada e link próprio; lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
+**Situação atual:** fontes na versão 0.30.0-beta. Geração local de histórias e agendamento nativo no TikTok Studio foram conferidos em conta do projeto. Isso não comprova alcance, vendas ou comissões. O YouTube pessoal e a rotina antiga de afiliados permanecem desativados nesta operação. O envio gratuito pelo navegador exige sessão autorizada, integração disponível e o assistente em execução; o aplicativo local não substitui essa conexão. Ofertas comerciais exigem afiliação aprovada e link próprio; lucro não é garantido. O sistema não cria contas, não aceita contratos em seu nome nem inventa links que pagam comissão.
 
 Para histórias completas com personagens desenhados, consulte [Animação 2D](docs/ANIMACAO_2D.md). A coleção oferece quatro histórias independentes, narração, música original e legendas, com galeria para assistir e baixar. A produção não publica nem altera agendamentos anteriores.
+
+A [reserva mensal 2D](docs/RESERVA_MENSAL_2D.md) organiza 96 histórias em quatro horários diários, reaproveitando os quatro pilotos. O produtor local trabalha em segundo plano e preserva arquivos concluídos. O painel separa produção, agendamentos observados e publicação efetiva.
 
 Para criar cenas curtas com personagens caminhando e manipulando objetos, consulte [Animações 3D](docs/ANIMACOES_3D.md). As demonstrações têm galeria própria e não entram na agenda de postagem.
 

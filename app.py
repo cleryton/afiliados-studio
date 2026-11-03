@@ -253,6 +253,12 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/delivery/prepare':
                 import story_delivery
                 return self.respond(200,story_delivery.prepare(payload.get('media_id')))
+            if path=='/api/stories/month/pause':
+                import cartoon_month
+                return self.respond(200,cartoon_month.pause(payload))
+            if path=='/api/stories/month/reconcile-owner':
+                import story_native
+                return self.respond(200,story_native.reconcile_owner(payload))
             if path=='/api/stories/week/prepare':
                 import story_week
                 return self.respond(200,story_week.prepare(payload))
@@ -469,7 +475,7 @@ def serve(args):
     except OSError:
         print(f'A porta {args.port} está ocupada. Use python app.py --port 8766')
         raise SystemExit(4)
-    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing,story_week,story_care,story_native
+    import catalog_media,maintenance,runtime_service,channel_probe,story_publishing,story_week,story_care,story_native,cartoon_month
     runtime_service.start([
         ('planejamento',autopilot.cycle,60,300),
         ('produção',worker,2,600),
@@ -481,6 +487,7 @@ def serve(args):
         ('histórias locais',stories.tick,5,600),
         ('TikTok das histórias',story_publishing.tick,15,180),
         ('Preparação da semana 3D',story_week.tick,15,180),
+        ('Produção da reserva mensal 2D',cartoon_month.tick,30,180),
         ('Cuidado automático das histórias',story_care.tick,60,180),
         ('Registros do TikTok Studio',story_native.tick,60,180),
     ],STOP)

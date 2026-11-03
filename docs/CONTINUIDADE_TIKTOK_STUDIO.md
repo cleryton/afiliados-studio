@@ -48,3 +48,9 @@ Os caminhos locais de integração são protegidos pelo mesmo token de sessão e
 - `POST /api/stories/native/confirm`: registra a observação do destino recarregado e salva um recibo de agendamento, mantendo publicação efetiva como não confirmada.
 
 Os caminhos acima não executam o navegador. Sem um operador ou uma integração compatível em execução, o aplicativo não publica sozinho. O catálogo de histórias continua finito. O modo tester bloqueia essas tentativas externas; os testes usam arquivos sintéticos e não representam posts reais.
+
+## Coleção mensal 2D
+
+O mesmo registro atende à [reserva mensal de 96 histórias](RESERVA_MENSAL_2D.md). A reserva mantém seus próprios horários e arquivos, sem modificar a semana 3D. O primeiro item mensal ainda sem confirmação tem prioridade; preparar de novo a mesma coleção não concede uploads adicionais.
+
+`POST /api/stories/month/reconcile-owner` existe somente para registrar um agendamento feito pelo titular fora das etapas do assistente, após relato explícito e conferência da lista nativa recarregada. Exige perfil, legenda, visibilidade, URL e data correspondentes, além dos arquivos originais inalterados. Não autoriza outro envio e não se aplica a um pedido já solicitado pelo fluxo normal. A marcação de IA não observada permanece desconhecida e a publicação efetiva permanece não confirmada.
