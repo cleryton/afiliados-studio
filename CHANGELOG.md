@@ -1,5 +1,11 @@
 # Alterações
 
+## 0.29.0-beta — 02/11/2026
+
+- Quatro histórias originais e independentes em animação 2D, com personagens articulados, movimento de objetos, clima e luz, narração local, música sintetizada original e legendas.
+- Nova galeria para assistir e baixar os vídeos completos. A coleção fica separada dos capítulos 3D e das filas de postagem existentes.
+- A galeria só recebe o pacote depois da conclusão, da conferência de movimento e da decodificação dos quatro filmes. Preparar os arquivos não cria agendamentos nem confirma publicação.
+
 ## 0.28.1-beta — 02/11/2026
 
 - O encerramento normal aguarda até 15 segundos pela leitura do painel ampliado, preservando a conferência de instalação, o token da sessão e a consulta rápida de disponibilidade. Evita interrupção prematura quando a biblioteca semanal cresce.
