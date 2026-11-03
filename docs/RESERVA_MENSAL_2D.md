@@ -48,3 +48,9 @@ A pedido explícito do titular, `story_local_archive.py` lista somente os MP4s c
 Roteiros, capas, legendas, recibos e vídeos sem confirmação ficam preservados. Pedidos em andamento ou incertos não podem ser limpos. Uma falha da Lixeira interrompe a sequência; não existe alternativa de exclusão permanente. A restauração é feita pela Lixeira.
 
 O painel separa histórias produzidas, MP4s disponíveis no notebook e MP4s retirados. Esses arquivos não são recriados nem reenviados automaticamente; o bloqueio contra duplicação continua usando os recibos, inclusive quando o MP4 já não está no notebook.
+
+## Conferência em sequência
+
+O caminho local `/native-operator` reúne os controles de preparação, início do upload, conferência da prévia, autorização única do pedido, confirmação observada e retirada do MP4 para a Lixeira. Ele facilita a operação pelo titular ou pelo assistente com o navegador autorizado. Cada observação precisa corresponder à tela real do TikTok.
+
+O painel usa os mesmos registros e a mesma proteção de sessão e origem do aplicativo. Credenciais não aparecem nos campos. Os botões apenas registram etapas locais: não enviam arquivos nem agendam no TikTok por conta própria. Uma tentativa existente não recebe outra permissão de upload. Uma resposta incerta pode ser retida para conferência; não repetir o clique em Agendar.

@@ -268,5 +268,30 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(body,b'2345')
 
 
+
+    def test_operator_cleanup_requires_session_origin_and_explicit_approval(self):
+        import story_local_archive
+        route='/api/stories/local-archive/recycle-confirmed'
+        with patch.object(story_local_archive,'execute',return_value={'recycled':1,'bytes':10}) as cleanup:
+            self.assertEqual(self.request(route,{'approved':True})[0],403)
+            self.assertEqual(self.request(route,{'approved':True},{'X-Studio-Token':app.TOKEN,'Origin':'https://example.com'})[0],403)
+            self.assertEqual(self.request(route,{}, {'X-Studio-Token':app.TOKEN})[0],400)
+            cleanup.assert_not_called()
+            status,_,body=self.request(route,{'approved':True},{'X-Studio-Token':app.TOKEN})
+            self.assertEqual(status,200);self.assertEqual(json.loads(body)['recycled'],1)
+            cleanup.assert_called_once_with()
+
+    def test_operator_page_has_no_inline_code_and_its_state_has_no_credentials(self):
+        status,_,body=self.request('/native-operator')
+        self.assertEqual(status,200)
+        self.assertIn(b'/native-operator.js',body)
+        self.assertNotIn(b'onclick=',body)
+        self.assertNotIn(app.TOKEN.encode(),body)
+        status,_,body=self.request('/api/stories/native/operator-state')
+        self.assertEqual(status,200)
+        self.assertNotIn(app.TOKEN.encode(),body)
+        self.assertNotIn(b'token',body)
+
+
 if __name__=='__main__':
     unittest.main()

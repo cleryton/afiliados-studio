@@ -127,6 +127,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/health':
                 import background
                 return self.respond(200,{'app':'AfiliadosStudio','version':VERSION,'tester':core.TESTER,'data_id':background.installation_id()})
+            if path=='/api/stories/native/operator-state':
+                import story_operator
+                return self.respond(200,story_operator.state())
             if path == '/api/state':
                 import content_engine
                 return self.respond(200, {**core.state(), 'token': TOKEN, 'stories':stories.state(), 'automation':autopilot.state(),'campaigns':campaigns.state(),'content':content_engine.state(),'catalog':catalog.state(),'youtube':youtube_client.state(),'setup':readiness(),'operation':diagnostics.state(),'mode':{'tester':core.TESTER,'version':VERSION,'publishing_allowed':not core.TESTER}})
@@ -153,7 +156,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_file(core.ROOT/'docs'/'MANUAL_TESTER.md')
                 if path=='/guia-operacao.md':
                     return self.send_file(core.ROOT/'docs'/'GUIA_FERIAS.md')
-                allowed = {'/': 'index.html', '/app.js': 'app.js', '/stories.js':'stories.js', '/stories.css':'stories.css', '/setup.js':'setup.js', '/automation.js':'automation.js', '/style.css': 'style.css', '/automation.css':'automation.css','/professional.js':'professional.js','/professional.css':'professional.css'}
+                allowed = {'/native-operator':'native-operator.html','/native-operator.js':'native-operator.js','/': 'index.html', '/app.js': 'app.js', '/stories.js':'stories.js', '/stories.css':'stories.css', '/setup.js':'setup.js', '/automation.js':'automation.js', '/style.css': 'style.css', '/automation.css':'automation.css','/professional.js':'professional.js','/professional.css':'professional.css'}
                 if path not in allowed:
                     return self.respond(404, {'error': 'Página não encontrada.'})
                 file = core.ROOT / 'web' / allowed[path]
@@ -253,6 +256,10 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/delivery/prepare':
                 import story_delivery
                 return self.respond(200,story_delivery.prepare(payload.get('media_id')))
+            if path=='/api/stories/local-archive/recycle-confirmed':
+                if payload.get('approved') is not True:raise ValueError('Confirme a retirada local recuperável dos MP4s já agendados.')
+                import story_local_archive
+                return self.respond(200,story_local_archive.execute())
             if path=='/api/stories/month/pause':
                 import cartoon_month
                 return self.respond(200,cartoon_month.pause(payload))
