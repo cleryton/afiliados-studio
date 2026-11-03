@@ -5,6 +5,7 @@
 - Reserva finita de 96 histórias em animação 2D, com quatro horários por dia. Reaproveita os quatro pilotos e produz 92 roteiros inéditos em segundo plano, preservando a coleção anterior.
 - Produção serial com projetos e roteiros fixados, conferência do vídeo concluído, retomada após interrupção e pausa no painel. Arquivos prontos e agendamentos nativos têm contagens separadas.
 - Registro nativo aceita a coleção mensal, bloqueia uploads e solicitações duplicadas e preserva o que foi realmente observado. Um agendamento feito pelo titular pode ser reconciliado após conferência, sem inventar ativação de IA nem publicação efetiva.
+- Retomada de pastas parciais interrompidas conserva filmes concluídos e recibos. Uma tentativa adicional exige revisão da causa e mantém o histórico anterior.
 
 ## 0.29.0-beta — 02/11/2026
 

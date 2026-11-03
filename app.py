@@ -259,6 +259,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/stories/month/reconcile-owner':
                 import story_native
                 return self.respond(200,story_native.reconcile_owner(payload))
+            if path=='/api/stories/month/retry-reviewed':
+                import cartoon_month
+                return self.respond(200,cartoon_month.retry_reviewed(payload))
             if path=='/api/stories/week/prepare':
                 import story_week
                 return self.respond(200,story_week.prepare(payload))

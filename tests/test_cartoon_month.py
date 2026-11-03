@@ -139,6 +139,39 @@ class MonthlyQueueTests(unittest.TestCase):
         native.hold({'id':request['id'],'reason':'network'})
         self.assertFalse(self.begin()['may_upload'])
 
+    def test_reviewed_retry_keeps_attempt_count_and_cannot_be_repeated(self):
+        with core.db() as c:
+            row=c.execute('SELECT id FROM cartoon_slots WHERE position=5').fetchone()
+            c.execute("UPDATE cartoon_slots SET status='error',attempts=2 WHERE id=?",(row['id'],))
+        with self.assertRaises(ValueError):month.retry_reviewed({'id':row['id']})
+        month.retry_reviewed({'id':row['id'],'cause_reviewed':True})
+        with core.db() as c:result=c.execute('SELECT * FROM cartoon_slots WHERE id=?',(row['id'],)).fetchone()
+        self.assertEqual(result['attempts'],2)
+        self.assertEqual(result['reviewed_retry'],1)
+        self.assertEqual(result['status'],'queued')
+        with self.assertRaises(ValueError):month.retry_reviewed({'id':row['id'],'cause_reviewed':True})
+
+    def test_completed_interrupted_master_is_recovered_even_at_attempt_limit(self):
+        with core.db() as c:
+            row=dict(c.execute('SELECT * FROM cartoon_slots WHERE position=5').fetchone())
+            c.execute("UPDATE cartoon_slots SET status='error' WHERE position>5")
+            c.execute("UPDATE cartoon_slots SET status='rendering',attempts=2 WHERE id=?",(row['id'],))
+        story=json.loads(row['story']);folder=core.DATA/'stories'/row['media_id'];folder.mkdir()
+        raw=b'Synthetic completed fixture, not real media evidence'
+        (folder/'video.mp4').write_bytes(raw)
+        Image.new('RGB',(540,960)).save(folder/'poster.png')
+        (folder/'legenda.txt').write_text(caption(story),encoding='utf-8')
+        (folder/'legendas.srt').write_text('Test fixture',encoding='utf-8')
+        meta={'animation_type':'original_procedural_2d','title':story['title'],'voice':True,'duration':45,
+              'sha256':hashlib.sha256(raw).hexdigest(),'validation':{'decoded':True},'scenes':story['scenes'],'offer':None}
+        (folder/'roteiro.json').write_text(json.dumps(meta),encoding='utf-8')
+        with patch('cartoon2d.render_story') as render:
+            month.run_worker()
+            render.assert_not_called()
+        with core.db() as c:result=c.execute('SELECT status,attempts FROM cartoon_slots WHERE id=?',(row['id'],)).fetchone()
+        self.assertEqual(result['status'],'ready');self.assertEqual(result['attempts'],2)
+        self.assertEqual((folder/'video.mp4').read_bytes(),raw)
+
     def test_catalog_action_frames_are_valid_for_every_scene(self):
         from cartoon_month_catalog import STORIES
         for story in STORIES:

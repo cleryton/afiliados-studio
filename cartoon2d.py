@@ -499,10 +499,30 @@ def soundtrack(story,durations,folder):
     return path
 
 
-def render_story(story,identifier,project):
+def output_folder(identifier,*,resume_incomplete=False):
+    """Reuse only a partial private render; never overwrite a finished master."""
+    if not isinstance(identifier,str) or not re.fullmatch('[a-f0-9]{32}',identifier):
+        raise ValueError('Identificador de vídeo inválido.')
+    root=(core.DATA/'stories').resolve();folder=root/identifier
+    if folder.is_symlink() or folder.resolve().parent!=root:
+        raise ValueError('Pasta fora do destino original.')
+    if folder.exists():
+        if not resume_incomplete or not folder.is_dir():raise ValueError('O destino já existe.')
+        for path in folder.iterdir():
+            if path.is_symlink() or not path.is_file() or path.resolve().parent!=folder:
+                raise ValueError('A pasta incompleta precisa de revisão.')
+            if path.name in ('video.mp4','roteiro.json','agendamento-tiktok.json'):
+                raise ValueError('Há um arquivo concluído ou recibo; não remontar automaticamente.')
+            if path.name not in ('video.building.mp4','encode.log','narration.wav','soundtrack.wav') and not re.fullmatch(r'(speech-\d+\.(wav|json)|timing-\d+\.json)',path.name):
+                raise ValueError('Arquivo inesperado no destino incompleto.')
+    else:folder.mkdir(parents=True)
+    return folder
+
+
+def render_story(story,identifier,project,*,resume_incomplete=False):
     import imageio_ffmpeg
     ffmpeg=imageio_ffmpeg.get_ffmpeg_exe()
-    folder=core.DATA/'stories'/identifier;folder.mkdir(parents=True)
+    folder=output_folder(identifier,resume_incomplete=resume_incomplete)
     durations,cards,methods,audio=narration(story,folder)
     music=soundtrack(story,durations,folder)
     total_frames=round(sum(durations)*FPS);ends=[];current=0

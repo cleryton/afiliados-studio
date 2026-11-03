@@ -57,5 +57,19 @@ class CartoonMotionTests(unittest.TestCase):
                     self.assertEqual(len(digests), 2)
 
 
+class PartialRenderTests(unittest.TestCase):
+    def test_partial_resume_does_not_overwrite_any_master_or_receipt(self):
+        with tempfile.TemporaryDirectory() as directory,patch.object(cartoon2d.core,'DATA',Path(directory)):
+            folder=cartoon2d.output_folder('e'*32)
+            (folder/'speech-0.json').write_text('{}',encoding='utf-8')
+            self.assertEqual(cartoon2d.output_folder('e'*32,resume_incomplete=True),folder)
+            for name in ('video.mp4','roteiro.json','agendamento-tiktok.json','unknown.txt'):
+                with self.subTest(name=name):
+                    target=folder/name;target.write_bytes(b'preserve')
+                    with self.assertRaises(ValueError):cartoon2d.output_folder('e'*32,resume_incomplete=True)
+                    self.assertEqual(target.read_bytes(),b'preserve');target.unlink()
+            with self.assertRaises(ValueError):cartoon2d.output_folder('e'*32)
+
+
 if __name__ == '__main__':
     unittest.main()

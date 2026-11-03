@@ -28,6 +28,8 @@ def init():
             due_at TEXT NOT NULL,story TEXT NOT NULL,script_hash TEXT NOT NULL,media_id TEXT NOT NULL,
             status TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,error TEXT NOT NULL DEFAULT '',updated_at TEXT NOT NULL,
             UNIQUE(plan_id,position),UNIQUE(plan_id,due_at));''')
+        if 'reviewed_retry' not in {r['name'] for r in c.execute('PRAGMA table_info(cartoon_slots)')}:
+            c.execute('ALTER TABLE cartoon_slots ADD COLUMN reviewed_retry INTEGER NOT NULL DEFAULT 0')
 
 
 def script_hash(story):
@@ -200,6 +202,22 @@ def pause(payload):
     return {'ok':True,'paused':payload['paused']}
 
 
+def retry_reviewed(payload):
+    """One extra local attempt after an operator fixes the cause; keep its history."""
+    if payload.get('cause_reviewed') is not True:raise ValueError('Confira e corrija a causa antes de retomar.')
+    plan,_=_rows()
+    if not plan:raise ValueError('Coleção não encontrada.')
+    with InstanceLock(core.DATA/'cartoon-month'/'worker'):
+        with core.db() as c:
+            c.execute('BEGIN IMMEDIATE')
+            row=c.execute('SELECT * FROM cartoon_slots WHERE id=? AND plan_id=?',(payload.get('id'),plan['id'])).fetchone()
+            if not row or row['status']!='error' or row['reviewed_retry'] or row['attempts']>=3:
+                raise ValueError('Não há uma retomada revisada disponível para este item.')
+            c.execute("UPDATE cartoon_slots SET status='queued',error='',reviewed_retry=1,updated_at=? WHERE id=?",(core.stamp(),row['id']))
+            c.execute('UPDATE cartoon_months SET production_enabled=? WHERE id=?',(int(not plan['paused']),plan['id']))
+    return {'ok':True}
+
+
 def tick():
     if core.TESTER or not exists():return
     with core.db() as c:
@@ -227,20 +245,20 @@ def run_worker():
                 job=dict(row)
                 if shutil.disk_usage(core.DATA).free<350*1024**2:
                     c.execute("UPDATE cartoon_slots SET error='Aguardando pelo menos 350 MB livres.' WHERE id=?",(job['id'],));break
-                if job['attempts']>=2:
-                    c.execute("UPDATE cartoon_slots SET status='error',error='Duas tentativas locais interrompidas; confira o registro.',updated_at=? WHERE id=?",(core.stamp(),job['id']))
-                    c.execute('UPDATE cartoon_months SET production_enabled=0 WHERE id=?',(job['plan_id'],));break
                 # Recover the exact completed master after a process interruption.
                 try:_source(job)
                 except (OSError,ValueError,KeyError,TypeError):pass
                 else:
                     c.execute("UPDATE cartoon_slots SET status='ready',error='',updated_at=? WHERE id=?",(core.stamp(),job['id']));continue
+                if job['attempts']>=2+job['reviewed_retry']:
+                    c.execute("UPDATE cartoon_slots SET status='error',error='Limite de tentativas locais atingido; confira o registro.',updated_at=? WHERE id=?",(core.stamp(),job['id']))
+                    c.execute('UPDATE cartoon_months SET production_enabled=0 WHERE id=?',(job['plan_id'],));break
                 c.execute("UPDATE cartoon_slots SET status='rendering',attempts=attempts+1,error='',updated_at=? WHERE id=?",(core.stamp(),job['id']))
             try:
                 story=json.loads(job['story']);project=core.DATA/'cartoon-month'/'projects'/job['id'];project.mkdir(parents=True,exist_ok=True)
                 (project/'story.json').write_text(json.dumps(story,ensure_ascii=False,indent=2),encoding='utf-8')
                 for name in ('cartoon2d.py','cartoon_worlds.py','cartoon_catalog.py'):(project/name).write_bytes((core.ROOT/name).read_bytes())
-                cartoon2d.render_story(story,job['media_id'],project)
+                cartoon2d.render_story(story,job['media_id'],project,resume_incomplete=True)
                 _source(job)
                 with core.db() as c:c.execute("UPDATE cartoon_slots SET status='ready',error='',updated_at=? WHERE id=?",(core.stamp(),job['id']))
                 export_calendar()
