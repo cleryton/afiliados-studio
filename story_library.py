@@ -102,10 +102,14 @@ def state():
 
 def native_post_exists(content_key, handle):
     """An existing native schedule/publication must not be re-uploaded via API."""
-    for row in entries():
-        if row['meta'].get('animation_type') != 'original_procedural_3d':continue
-        if content_key != f"3d:a-chave-do-12:{row['meta']['episode']}":continue
-        saved=receipt(row['id'])
+    root=core.DATA/'stories'
+    if not root.is_dir():return False
+    for folder in root.iterdir():
+        if not ID.fullmatch(folder.name) or folder.is_symlink() or not folder.is_dir() or folder.resolve().parent!=root.resolve():continue
+        meta=read_json(folder/'roteiro.json') or {}
+        if meta.get('animation_type') != 'original_procedural_3d':continue
+        if content_key != f"3d:a-chave-do-12:{meta.get('episode')}":continue
+        saved=receipt(folder.name)
         if saved and saved['handle'].lower()==handle.lower():return True
     return False
 

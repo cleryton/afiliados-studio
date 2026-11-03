@@ -219,13 +219,15 @@ def state():
         row['title']=STORIES[row['number']]['title'] if row['number'] in STORIES else ('A filha na fotografia' if row['number']==2 else 'O que a caixa guardava')
         row['receipt']=story_library.receipt(row['media_id']) if row['media_id'] else None
         row['package']=story_delivery.info(row['media_id']) if row['media_id'] and not row['receipt'] else None
-        if row['status']=='ready' and not (core.DATA/'stories'/row['media_id']/'video.mp4').is_file():
+        from story_local_archive import archived
+        row['local_archived']=bool(row['receipt'] and archived(row['media_id']))
+        if row['status']=='ready' and not row['local_archived'] and not (core.DATA/'stories'/row['media_id']/'video.mp4').is_file():
             row['status']='error';row['error']='Arquivo indisponível. A data continua sendo apenas um plano local.'
         if row['status']=='ready' and (story_delivery.target()!=plan['handle'] or not story_offers.current(json.loads(plan['offer']))):
             row['status']='error';row['error']='O perfil ou a oferta mudou. Confira os dados antes de retomar.';row['package']=None
     native=sum(bool(r['receipt']) for r in slots)
     return {'id':plan['id'],'handle':plan['handle'],'start_date':plan['start_date'],'preparing':bool(plan['enabled']),'paused':bool(plan['paused']),
-            'slots':slots,'ready':sum(r['status']=='ready' for r in slots),'total':len(slots),'per_day':len(slots)//7,
+            'slots':slots,'ready':sum(r['status']=='ready' and not r.get('local_archived') for r in slots),'total':len(slots),'per_day':len(slots)//7,
             'native_registered':native,
             'collection':'standalone' if any(s['number'] in NEXT_NUMBERS for s in slots) else 'first',
             'notice':f'{native} de {len(slots)} capítulos com registro nativo. Os demais horários são propostas locais; a data passar não comprova publicação.'}

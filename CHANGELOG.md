@@ -1,5 +1,10 @@
 # Alterações
 
+## 0.30.1-beta — 03/11/2026
+
+- Limpeza recuperável dos MP4s locais com recibo de agendamento confirmado, somente a pedido do titular. Roteiros, legendas, capas, recibos e arquivos ainda não enviados são preservados.
+- Painel distingue vídeos produzidos, arquivos locais disponíveis e MP4s retirados. A retirada não cancela agendamentos, não dispara nova montagem e não libera outro upload.
+
 ## 0.30.0-beta — 02/11/2026
 
 - Reserva finita de 96 histórias em animação 2D, com quatro horários por dia. Reaproveita os quatro pilotos e produz 92 roteiros inéditos em segundo plano, preservando a coleção anterior.

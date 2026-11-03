@@ -161,6 +161,7 @@ def begin(payload):
 
 def state():
     from story_library import receipt
+    from story_local_archive import archived
     plan,rows=_rows()
     if not plan:return None
     with core.db() as c:
@@ -168,15 +169,19 @@ def state():
     items=[]
     for r in rows:
         story=json.loads(r['story']);saved=observed.get(r['media_id']) or (receipt(r['media_id']) if r['status']=='ready' else None)
-        items.append({'id':r['id'],'position':r['position'],'due_at':r['due_at'],'media_id':r['media_id'],
+        present=(core.DATA/'stories'/r['media_id']/'video.mp4').is_file()
+        retired=bool(saved and archived(r['media_id']))
+        items.append({'local_archived':retired,'id':r['id'],'position':r['position'],'due_at':r['due_at'],'media_id':r['media_id'],
                       'title':story['title'],'status':r['status'],'error':r['error'],'receipt':saved,
-                      'video_url':f"/stories/{r['media_id']}/video.mp4" if r['status']=='ready' else None,
+                      'video_url':f"/stories/{r['media_id']}/video.mp4" if r['status']=='ready' and present else None,
                       'poster_url':f"/stories/{r['media_id']}/poster.png" if r['status']=='ready' else None})
     confirmed=sum(bool(i['receipt'] and i['receipt']['handle']==plan['handle']) for i in items)
-    ready=sum(i['status']=='ready' for i in items)
+    ready=sum(i['status']=='ready' and bool(i['video_url']) for i in items)
+    produced=sum(i['status']=='ready' for i in items)
+    retired=sum(i['local_archived'] for i in items)
     pending=next((i for i in items if not i['receipt']),None)
     return {**plan,'total':len(items),'ready':ready,'confirmed':confirmed,'pending':len(items)-confirmed,
-            'per_day':4,'hours':list(HOURS),'next_item':pending,'slots':items,
+            'per_day':4,'hours':list(HOURS),'next_item':pending,'slots':items,'produced':produced,'archived':retired,
             'publication_requires_browser':True,'publishes_automatically_without_operator':False}
 
 

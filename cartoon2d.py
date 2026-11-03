@@ -585,6 +585,10 @@ def render():
     root=core.DATA/'cartoon-2d';root.mkdir(parents=True,exist_ok=True)
     with InstanceLock(root/'render'):
         existing=state();catalog=root/'catalog.json'
+        from story_library import read_json
+        from story_local_archive import archived
+        if any(archived(r.get('id')) for r in (read_json(catalog) or {}).get('clips',[]) if isinstance(r,dict)):
+            raise ValueError('Os pilotos já agendados foram retirados a seu pedido. Recupere os MP4s na Lixeira para assistir; não gerar cópias automaticamente.')
         if catalog.is_file() and len(existing)==4 and json.loads(catalog.read_text(encoding='utf-8')).get('source_sha256')==source_hash():
             print(json.dumps({'existing':True,'clips':existing},ensure_ascii=False),flush=True);return
         project=root/uuid4().hex;project.mkdir()

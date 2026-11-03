@@ -40,3 +40,11 @@ Login, CAPTCHA, códigos, conta diferente, acesso recusado ao arquivo e resposta
 Não execute `core.init()` como auxiliar no banco em uso. Não execute novamente a produção dos quatro pilotos para preencher a reserva: os quatro arquivos existentes já estão vinculados. Os diretórios de dados permanecem privados e fora do Git.
 
 O acompanhamento recorrente pode continuar os próximos horários quando houver sessão disponível. Ele deve conservar o primeiro pedido ainda sem confirmação, evitar notificações repetidas para um mesmo bloqueio e encerrar ao concluir os 96 registros observados. O resumo em `data/cartoon-month/automation-status.json` é apenas a última observação do acompanhamento, sem credenciais; não substitui os recibos.
+
+## Retirar MP4s locais depois do agendamento
+
+A pedido explícito do titular, `story_local_archive.py` lista somente os MP4s com recibo de agendamento confirmado das coleções atuais do perfil exclusivo. `--execute` envia esses arquivos para a Lixeira do Windows, com relatório persistente, validação do caminho original e comparação do vídeo com o recibo. Não cancela nem apaga conteúdo do TikTok.
+
+Roteiros, capas, legendas, recibos e vídeos sem confirmação ficam preservados. Pedidos em andamento ou incertos não podem ser limpos. Uma falha da Lixeira interrompe a sequência; não existe alternativa de exclusão permanente. A restauração é feita pela Lixeira.
+
+O painel separa histórias produzidas, MP4s disponíveis no notebook e MP4s retirados. Esses arquivos não são recriados nem reenviados automaticamente; o bloqueio contra duplicação continua usando os recibos, inclusive quando o MP4 já não está no notebook.
